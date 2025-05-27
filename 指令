@@ -1,0 +1,3 @@
+net start mysql
+mysql -u root -p
+SHOW DATABASES;

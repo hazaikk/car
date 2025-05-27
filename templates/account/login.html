@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block title %}登录 - 汽车数据平台{% endblock %}
+{% block extra_css %}
+<style>
+.login-container { max-width: 400px; margin: 60px auto; padding: 2rem; background: #fff; border-radius: 10px; box-shadow: 0 2px 16px rgba(0,0,0,0.08); }
+.login-title { text-align: center; margin-bottom: 1.5rem; font-weight: bold; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="login-container">
+    <h2 class="login-title">登录</h2>
+    <form method="post" action="{% url 'account_login' %}">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        <div class="mb-3">
+            <label for="id_login" class="form-label">用户名或邮箱</label>
+            <input type="text" name="login" class="form-control" id="id_login" value="{{ form.login.value|default:'' }}">
+            {{ form.login.errors }}
+        </div>
+        <div class="mb-3">
+            <label for="id_password" class="form-label">密码</label>
+            <input type="password" name="password" class="form-control" id="id_password">
+            {{ form.password.errors }}
+        </div>
+        <div class="mb-3 form-check">
+            <input type="checkbox" name="remember" class="form-check-input" id="id_remember" {% if form.remember.value %}checked{% endif %}>
+            <label class="form-check-label" for="id_remember">记住我</label>
+        </div>
+        <button type="submit" class="btn btn-primary w-100">登录</button>
+    </form>
+    <div class="mt-3 text-center">
+        <a href="{% url 'account_reset_password' %}">忘记密码？</a> | <a href="{% url 'account_signup' %}">注册新账号</a>
+    </div>
+</div>
+{% endblock %}

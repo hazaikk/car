@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+
+{% block title %}数据分析 - 汽车之家数据可视化与智能分析平台{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        transition: transform 0.3s;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+    .chart-container {
+        position: relative;
+        height: 350px;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">数据分析概览</h5>
+            </div>
+            <div class="card-body">
+                <p class="lead">通过数据分析，您可以深入了解二手车市场的各种趋势和特点。</p>
+                <div class="row mt-4">
+                    <div class="col-md-4 mb-3">
+                        <div class="card bg-light stat-card h-100">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">总车辆数</h5>
+                                <h2 class="display-4">{{ total_cars|default:"0" }}</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="card bg-light stat-card h-100">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">品牌数量</h5>
+                                <h2 class="display-4">{{ total_brands|default:"0" }}</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="card bg-light stat-card h-100">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">平均价格</h5>
+                                <h2 class="display-4">{{ avg_price|floatformat:2|default:"0" }} 万</h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">分析模块</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">品牌分析</h5>
+                                <p class="card-text">分析各品牌的市场份额、价格区间和用户评价等数据。</p>
+                            </div>
+                            <div class="card-footer">
+                                <a href="{% url 'data_analysis:brand_analysis' %}" class="btn btn-primary">查看分析</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">价格趋势分析</h5>
+                                <p class="card-text">分析不同年份、不同品牌的价格变化趋势。</p>
+                            </div>
+                            <div class="card-footer">
+                                <a href="{% url 'data_analysis:price_trend_analysis' %}" class="btn btn-primary">查看分析</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">地区分布分析</h5>
+                                <p class="card-text">分析不同地区的车辆数量、价格差异等数据。</p>
+                            </div>
+                            <div class="card-footer">
+                                <a href="{% url 'data_analysis:region_distribution' %}" class="btn btn-primary">查看分析</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 如果需要在页面加载时执行一些JavaScript代码，可以在这里添加
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('数据分析页面已加载');
+    });
+</script>
+{% endblock %}

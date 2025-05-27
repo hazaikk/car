@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}更改邮箱 - 汽车数据平台{% endblock %}
+{% block extra_css %}
+<style>
+.change-email-container { max-width: 400px; margin: 60px auto; padding: 2rem; background: #fff; border-radius: 10px; box-shadow: 0 2px 16px rgba(0,0,0,0.08); }
+.change-email-title { text-align: center; margin-bottom: 1.5rem; font-weight: bold; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="change-email-container">
+    <h2 class="change-email-title">更改邮箱</h2>
+    <form method="post" action="">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        <div class="mb-3">
+            <label for="id_new_email" class="form-label">新邮箱</label>
+            <input type="email" name="new_email" class="form-control" id="id_new_email" value="{{ form.new_email.value|default:'' }}">
+            {{ form.new_email.errors }}
+        </div>
+        <button type="submit" class="btn btn-primary w-100">更改邮箱</button>
+    </form>
+    <div class="mt-3 text-center">
+        <a href="{% url 'account_login' %}">返回登录</a>
+    </div>
+</div>
+{% endblock %}

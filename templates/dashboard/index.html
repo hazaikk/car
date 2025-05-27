@@ -1,0 +1,200 @@
+{% extends 'base.html' %}
+
+{% block title %}首页 - 汽车之家数据可视化与智能分析平台{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- 统计卡片 -->
+    <div class="col-md-3 mb-4">
+        <div class="card border-primary h-100">
+            <div class="card-body text-center">
+                <h5 class="card-title">车辆总数</h5>
+                <p class="card-text display-4">{{ total_cars|default:"0" }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-4">
+        <div class="card border-success h-100">
+            <div class="card-body text-center">
+                <h5 class="card-title">品牌总数</h5>
+                <p class="card-text display-4">{{ total_brands|default:"0" }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-4">
+        <div class="card border-info h-100">
+            <div class="card-body text-center">
+                <h5 class="card-title">平均价格</h5>
+                <p class="card-text display-4">{{ avg_price|floatformat:2|default:"0" }} 万</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-4">
+        <div class="card border-warning h-100">
+            <div class="card-body text-center">
+                <h5 class="card-title">今日更新</h5>
+                <p class="card-text display-4">0</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 图表区域 -->
+<div class="row mt-4">
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">品牌分布</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="brandChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="card-title mb-0">价格区间分布</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="priceChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 最新数据 -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="card-title mb-0">最新车辆数据</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>车辆名称</th>
+                                <th>品牌</th>
+                                <th>价格(万)</th>
+                                <th>年份</th>
+                                <th>里程(万公里)</th>
+                                <th>地区</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if latest_cars %}
+                                {% for car in latest_cars %}
+                                <tr>
+                                    <td>{{ car.title }}</td>
+                                    <td>{{ car.car_model.brand.name }}</td>
+                                    <td>{{ car.price }}</td>
+                                    <td>{{ car.year }}</td>
+                                    <td>{{ car.mileage }}</td>
+                                    <td>{{ car.location }}</td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center">暂无数据</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 模拟数据 - 实际项目中应该从后端获取
+    const brandData = {
+        labels: ['奔驰', '宝马', '奥迪', '大众', '丰田', '本田', '其他'],
+        datasets: [{
+            label: '品牌分布',
+            data: [25, 20, 18, 15, 12, 10, 20],
+            backgroundColor: [
+                'rgba(255, 99, 132, 0.7)',
+                'rgba(54, 162, 235, 0.7)',
+                'rgba(255, 206, 86, 0.7)',
+                'rgba(75, 192, 192, 0.7)',
+                'rgba(153, 102, 255, 0.7)',
+                'rgba(255, 159, 64, 0.7)',
+                'rgba(199, 199, 199, 0.7)'
+            ],
+            borderWidth: 1
+        }]
+    };
+
+    const priceData = {
+        labels: ['0-5万', '5-10万', '10-15万', '15-20万', '20-30万', '30-50万', '50万以上'],
+        datasets: [{
+            label: '价格区间分布',
+            data: [15, 25, 20, 18, 12, 8, 2],
+            backgroundColor: 'rgba(75, 192, 192, 0.7)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 1
+        }]
+    };
+
+    // 初始化图表
+    document.addEventListener('DOMContentLoaded', function() {
+        // 品牌分布饼图
+        const brandCtx = document.getElementById('brandChart').getContext('2d');
+        new Chart(brandCtx, {
+            type: 'pie',
+            data: brandData,
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                    },
+                    title: {
+                        display: true,
+                        text: '品牌分布统计'
+                    }
+                }
+            }
+        });
+
+        // 价格区间柱状图
+        const priceCtx = document.getElementById('priceChart').getContext('2d');
+        new Chart(priceCtx, {
+            type: 'bar',
+            data: priceData,
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    title: {
+                        display: true,
+                        text: '价格区间分布'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: '车辆数量'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: '价格区间'
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

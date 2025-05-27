@@ -1,0 +1,441 @@
+{% extends 'base.html' %}
+
+{% block title %}仪表盘 - 汽车之家数据可视化与智能分析平台{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filter-card {
+        margin-bottom: 20px;
+    }
+    .chart-container {
+        position: relative;
+        height: 350px;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card filter-card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">数据筛选</h5>
+            </div>
+            <div class="card-body">
+                <form id="filterForm" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="brand" class="form-label">品牌</label>
+                        <select id="brand" class="form-select">
+                            <option value="">全部品牌</option>
+                            <!-- 这里应该动态加载品牌列表 -->
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="priceRange" class="form-label">价格区间</label>
+                        <select id="priceRange" class="form-select">
+                            <option value="">全部价格</option>
+                            <option value="0-5">0-5万</option>
+                            <option value="5-10">5-10万</option>
+                            <option value="10-15">10-15万</option>
+                            <option value="15-20">15-20万</option>
+                            <option value="20-30">20-30万</option>
+                            <option value="30-50">30-50万</option>
+                            <option value="50-999">50万以上</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="year" class="form-label">年份</label>
+                        <select id="year" class="form-select">
+                            <option value="">全部年份</option>
+                            <!-- 这里应该动态加载年份列表 -->
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="location" class="form-label">地区</label>
+                        <select id="location" class="form-select">
+                            <option value="">全部地区</option>
+                            <!-- 这里应该动态加载地区列表 -->
+                        </select>
+                    </div>
+                    <div class="col-12 text-end">
+                        <button type="submit" class="btn btn-primary">应用筛选</button>
+                        <button type="reset" class="btn btn-secondary">重置</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 图表区域 -->
+<div class="row">
+    <!-- 品牌分布 -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">品牌分布</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="brandDistributionChart"></canvas>
+                </div>
+            </div>
+            <div class="card-footer">
+                <button class="btn btn-sm btn-outline-primary" id="exportBrandChart">导出图表</button>
+                <button class="btn btn-sm btn-outline-secondary" id="exportBrandData">导出数据</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 价格分布 -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-success text-white">
+                <h5 class="card-title mb-0">价格分布</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="priceDistributionChart"></canvas>
+                </div>
+            </div>
+            <div class="card-footer">
+                <button class="btn btn-sm btn-outline-success" id="exportPriceChart">导出图表</button>
+                <button class="btn btn-sm btn-outline-secondary" id="exportPriceData">导出数据</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- 年份分布 -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-info text-white">
+                <h5 class="card-title mb-0">年份分布</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="yearDistributionChart"></canvas>
+                </div>
+            </div>
+            <div class="card-footer">
+                <button class="btn btn-sm btn-outline-info" id="exportYearChart">导出图表</button>
+                <button class="btn btn-sm btn-outline-secondary" id="exportYearData">导出数据</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 地区分布 -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="card-title mb-0">地区分布</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="locationDistributionChart"></canvas>
+                </div>
+            </div>
+            <div class="card-footer">
+                <button class="btn btn-sm btn-outline-warning" id="exportLocationChart">导出图表</button>
+                <button class="btn btn-sm btn-outline-secondary" id="exportLocationData">导出数据</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 智能推荐 -->
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">智能推荐</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-lightbulb me-2"></i>根据您的浏览历史和筛选条件，我们为您推荐以下车型
+                </div>
+                <div class="row" id="recommendationContainer">
+                    <!-- 推荐内容将通过JavaScript动态加载 -->
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">奔驰 C级</h5>
+                                <p class="card-text">平均价格: 28.5万元</p>
+                                <p class="card-text">推荐理由: 与您浏览的车型价格区间相似，品牌评分较高</p>
+                            </div>
+                            <div class="card-footer">
+                                <a href="#" class="btn btn-sm btn-primary">查看详情</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">宝马 3系</h5>
+                                <p class="card-text">平均价格: 31.2万元</p>
+                                <p class="card-text">推荐理由: 与您浏览的车型配置相似，性价比较高</p>
+                            </div>
+                            <div class="card-footer">
+                                <a href="#" class="btn btn-sm btn-primary">查看详情</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">奥迪 A4L</h5>
+                                <p class="card-text">平均价格: 30.8万元</p>
+                                <p class="card-text">推荐理由: 与您关注的车型同级别，用户评分较高</p>
+                            </div>
+                            <div class="card-footer">
+                                <a href="#" class="btn btn-sm btn-primary">查看详情</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 模拟数据 - 实际项目中应该从后端API获取
+    const brandData = {
+        labels: ['奔驰', '宝马', '奥迪', '大众', '丰田', '本田', '其他'],
+        datasets: [{
+            label: '品牌分布',
+            data: [25, 20, 18, 15, 12, 10, 20],
+            backgroundColor: [
+                'rgba(255, 99, 132, 0.7)',
+                'rgba(54, 162, 235, 0.7)',
+                'rgba(255, 206, 86, 0.7)',
+                'rgba(75, 192, 192, 0.7)',
+                'rgba(153, 102, 255, 0.7)',
+                'rgba(255, 159, 64, 0.7)',
+                'rgba(199, 199, 199, 0.7)'
+            ],
+            borderWidth: 1
+        }]
+    };
+
+    const priceData = {
+        labels: ['0-5万', '5-10万', '10-15万', '15-20万', '20-30万', '30-50万', '50万以上'],
+        datasets: [{
+            label: '价格区间分布',
+            data: [15, 25, 20, 18, 12, 8, 2],
+            backgroundColor: 'rgba(75, 192, 192, 0.7)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 1
+        }]
+    };
+
+    const yearData = {
+        labels: ['2023', '2022', '2021', '2020', '2019', '2018', '2017', '2016', '2015', '2014', '2013及以前'],
+        datasets: [{
+            label: '年份分布',
+            data: [5, 8, 12, 15, 18, 20, 15, 10, 8, 5, 4],
+            backgroundColor: 'rgba(54, 162, 235, 0.7)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1
+        }]
+    };
+
+    const locationData = {
+        labels: ['北京', '上海', '广州', '深圳', '成都', '杭州', '武汉', '其他'],
+        datasets: [{
+            label: '地区分布',
+            data: [18, 15, 12, 10, 8, 7, 6, 24],
+            backgroundColor: [
+                'rgba(255, 99, 132, 0.7)',
+                'rgba(54, 162, 235, 0.7)',
+                'rgba(255, 206, 86, 0.7)',
+                'rgba(75, 192, 192, 0.7)',
+                'rgba(153, 102, 255, 0.7)',
+                'rgba(255, 159, 64, 0.7)',
+                'rgba(255, 99, 132, 0.5)',
+                'rgba(199, 199, 199, 0.7)'
+            ],
+            borderWidth: 1
+        }]
+    };
+
+    // 初始化图表
+    document.addEventListener('DOMContentLoaded', function() {
+        // 品牌分布饼图
+        const brandCtx = document.getElementById('brandDistributionChart').getContext('2d');
+        const brandChart = new Chart(brandCtx, {
+            type: 'pie',
+            data: brandData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                    },
+                    title: {
+                        display: true,
+                        text: '品牌分布统计'
+                    }
+                }
+            }
+        });
+
+        // 价格区间柱状图
+        const priceCtx = document.getElementById('priceDistributionChart').getContext('2d');
+        const priceChart = new Chart(priceCtx, {
+            type: 'bar',
+            data: priceData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    title: {
+                        display: true,
+                        text: '价格区间分布'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: '车辆数量'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: '价格区间'
+                        }
+                    }
+                }
+            }
+        });
+
+        // 年份分布折线图
+        const yearCtx = document.getElementById('yearDistributionChart').getContext('2d');
+        const yearChart = new Chart(yearCtx, {
+            type: 'line',
+            data: yearData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    title: {
+                        display: true,
+                        text: '年份分布'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: '车辆数量'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: '年份'
+                        }
+                    }
+                }
+            }
+        });
+
+        // 地区分布饼图
+        const locationCtx = document.getElementById('locationDistributionChart').getContext('2d');
+        const locationChart = new Chart(locationCtx, {
+            type: 'doughnut',
+            data: locationData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                    },
+                    title: {
+                        display: true,
+                        text: '地区分布统计'
+                    }
+                }
+            }
+        });
+
+        // 导出图表功能
+        document.getElementById('exportBrandChart').addEventListener('click', function() {
+            const url = brandChart.toBase64Image();
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = '品牌分布.png';
+            link.click();
+        });
+
+        document.getElementById('exportPriceChart').addEventListener('click', function() {
+            const url = priceChart.toBase64Image();
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = '价格分布.png';
+            link.click();
+        });
+
+        document.getElementById('exportYearChart').addEventListener('click', function() {
+            const url = yearChart.toBase64Image();
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = '年份分布.png';
+            link.click();
+        });
+
+        document.getElementById('exportLocationChart').addEventListener('click', function() {
+            const url = locationChart.toBase64Image();
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = '地区分布.png';
+            link.click();
+        });
+
+        // 导出数据功能
+        function exportToExcel(data, filename) {
+            // 实际项目中应该调用后端API来生成Excel文件
+            alert(`导出${filename}数据功能将在后端实现`);
+        }
+
+        document.getElementById('exportBrandData').addEventListener('click', function() {
+            exportToExcel(brandData, '品牌分布');
+        });
+
+        document.getElementById('exportPriceData').addEventListener('click', function() {
+            exportToExcel(priceData, '价格分布');
+        });
+
+        document.getElementById('exportYearData').addEventListener('click', function() {
+            exportToExcel(yearData, '年份分布');
+        });
+
+        document.getElementById('exportLocationData').addEventListener('click', function() {
+            exportToExcel(locationData, '地区分布');
+        });
+
+        // 筛选表单提交
+        document.getElementById('filterForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            // 实际项目中应该调用API获取筛选后的数据并更新图表
+            alert('筛选功能将在后端实现');
+        });
+    });
+</script>
+{% endblock %}

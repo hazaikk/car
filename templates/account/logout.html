@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block title %}注销 - 汽车数据平台{% endblock %}
+{% block extra_css %}
+<style>
+.logout-container { max-width: 400px; margin: 60px auto; padding: 2rem; background: #fff; border-radius: 10px; box-shadow: 0 2px 16px rgba(0,0,0,0.08); }
+.logout-title { text-align: center; margin-bottom: 1.5rem; font-weight: bold; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="logout-container">
+    <h2 class="logout-title">确认注销</h2>
+    <form method="post" action="{% url 'account_logout' %}">
+        {% csrf_token %}
+        <p class="text-center">您确定要注销吗？</p>
+        <button type="submit" class="btn btn-danger w-100">注销</button>
+    </form>
+    <div class="mt-3 text-center">
+        <a href="{% url 'account_login' %}">返回登录</a>
+    </div>
+</div>
+{% endblock %}
