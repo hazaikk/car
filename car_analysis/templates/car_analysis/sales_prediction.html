@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}销量预测 - {{ car.brand.name }} {{ car.name }} - {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'car_analysis:home' %}">智能分析</a></li>
+            <li class="breadcrumb-item active">销量预测</li>
+        </ol>
+    </nav>
+
+    <div class="row mb-4">
+        <div class="col">
+            <h1>{{ car.brand.name }} {{ car.name }} - 销量预测</h1>
+            <p class="text-muted">
+                最后更新时间：{{ last_updated|date:"Y-m-d H:i" }}
+                <button class="btn btn-sm btn-outline-primary ms-2" id="refreshBtn">
+                    <i class="fas fa-sync-alt"></i> 刷新分析
+                </button>
+            </p>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- 预测结果卡片 -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">预测结果</h5>
+                    <div class="prediction-stats">
+                        <div class="mb-3">
+                            <label class="form-label">预测准确度</label>
+                            <div class="progress">
+                                <div class="progress-bar" role="progressbar" 
+                                     style="width: {{ analysis.accuracy|floatformat:1 }}%"
+                                     aria-valuenow="{{ analysis.accuracy|floatformat:1 }}" 
+                                     aria-valuemin="0" aria-valuemax="100">
+                                    {{ analysis.accuracy|floatformat:1 }}%
+                                </div>
+                            </div>
+                        </div>
+                        <div id="predictionSummary">
+                            <!-- 由JavaScript填充预测摘要 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 销量趋势图表 -->
+        <div class="col-md-8 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">销量趋势预测</h5>
+                    <div id="salesChart" style="height: 400px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- 预测详情表格 -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">预测详情</h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>预测月份</th>
+                                    <th>预测销量</th>
+                                    <th>同比变化</th>
+                                </tr>
+                            </thead>
+                            <tbody id="predictionTable">
+                                <!-- 由JavaScript填充预测数据 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const salesChart = echarts.init(document.getElementById('salesChart'));
+    let predictionData = {{ analysis.prediction_data|safe }};
+    
+    function updateChart() {
+        // 准备图表数据
+        const months = predictionData.months.map(m => `第${m}月`);
+        const predictions = predictionData.predictions;
+        
+        // 配置图表选项
+        const option = {
+            tooltip: {
+                trigger: 'axis',
+                formatter: '{b}<br />预测销量: {c}辆'
+            },
+            xAxis: {
+                type: 'category',
+                data: months,
+                name: '月份'
+            },
+            yAxis: {
+                type: 'value',
+                name: '销量（辆）'
+            },
+            series: [{
+                name: '预测销量',
+                type: 'line',
+                data: predictions,
+                smooth: true,
+                markPoint: {
+                    data: [
+                        {type: 'max', name: '最高'},
+                        {type: 'min', name: '最低'}
+                    ]
+                },
+                markLine: {
+                    data: [
+                        {type: 'average', name: '平均'}
+                    ]
+                }
+            }]
+        };
+        
+        salesChart.setOption(option);
+    }
+    
+    function updatePredictionSummary() {
+        const predictions = predictionData.predictions;
+        const avgSales = Math.round(predictions.reduce((a, b) => a + b, 0) / predictions.length);
+        const maxSales = Math.max(...predictions);
+        const minSales = Math.min(...predictions);
+        
+        document.getElementById('predictionSummary').innerHTML = `
+            <div class="mb-2">
+                <small class="text-muted">预测期间平均月销量</small>
+                <h4>${avgSales}辆</h4>
+            </div>
+            <div class="mb-2">
+                <small class="text-muted">最高月销量</small>
+                <h4>${maxSales}辆</h4>
+            </div>
+            <div>
+                <small class="text-muted">最低月销量</small>
+                <h4>${minSales}辆</h4>
+            </div>
+        `;
+    }
+    
+    function updatePredictionTable() {
+        const tbody = document.getElementById('predictionTable');
+        tbody.innerHTML = '';
+        
+        predictionData.months.forEach((month, index) => {
+            const sales = predictionData.predictions[index];
+            const prevSales = index > 0 ? predictionData.predictions[index - 1] : null;
+            const change = prevSales ? ((sales - prevSales) / prevSales * 100).toFixed(1) : '-';
+            
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>第${month}月</td>
+                <td>${sales}辆</td>
+                <td>${change === '-' ? '-' : change + '%'}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+    
+    // 初始化显示
+    updateChart();
+    updatePredictionSummary();
+    updatePredictionTable();
+    
+    // 处理窗口大小变化
+    window.addEventListener('resize', function() {
+        salesChart.resize();
+    });
+    
+    // 刷新按钮点击事件
+    document.getElementById('refreshBtn').addEventListener('click', function() {
+        this.disabled = true;
+        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 刷新中...';
+        
+        fetch(window.location.href + '?refresh=true')
+            .then(response => response.json())
+            .then(data => {
+                predictionData = data.prediction_data;
+                
+                // 更新准确度显示
+                const progressBar = document.querySelector('.progress-bar');
+                progressBar.style.width = data.accuracy + '%';
+                progressBar.setAttribute('aria-valuenow', data.accuracy);
+                progressBar.textContent = data.accuracy.toFixed(1) + '%';
+                
+                // 更新图表和数据
+                updateChart();
+                updatePredictionSummary();
+                updatePredictionTable();
+            })
+            .finally(() => {
+                this.disabled = false;
+                this.innerHTML = '<i class="fas fa-sync-alt"></i> 刷新分析';
+            });
+    });
+});
+</script>
+{% endblock %} 

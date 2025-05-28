@@ -1,0 +1,241 @@
+{% extends "visualization/base.html" %}
+
+{% block visualization_content %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">创建新图表</h4>
+                </div>
+                <div class="card-body">
+                    <form id="chartForm" class="needs-validation" novalidate>
+                        <!-- 基本信息 -->
+                        <div class="mb-4">
+                            <h5>基本信息</h5>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="title" class="form-label">图表标题 *</label>
+                                    <input type="text" class="form-control" id="title" name="title" required>
+                                    <div class="invalid-feedback">
+                                        请输入图表标题
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="description" class="form-label">图表描述</label>
+                                    <input type="text" class="form-control" id="description" name="description">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 图表类型 -->
+                        <div class="mb-4">
+                            <h5>图表类型</h5>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="chartType" class="form-label">选择图表类型 *</label>
+                                    <select class="form-select" id="chartType" name="chart_type" required>
+                                        <option value="">请选择...</option>
+                                        {% for value, label in chart_types %}
+                                        <option value="{{ value }}">{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="invalid-feedback">
+                                        请选择图表类型
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="dataType" class="form-label">数据类型 *</label>
+                                    <select class="form-select" id="dataType" name="data_type" required>
+                                        <option value="">请选择...</option>
+                                        {% for value, label in data_types %}
+                                        <option value="{{ value }}">{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="invalid-feedback">
+                                        请选择数据类型
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 数据配置 -->
+                        <div class="mb-4">
+                            <h5>数据配置</h5>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="xAxis" class="form-label">X轴字段 *</label>
+                                    <select class="form-select" id="xAxis" name="x_axis" required>
+                                        <option value="">请选择...</option>
+                                        <!-- 动态加载可用字段 -->
+                                    </select>
+                                    <div class="invalid-feedback">
+                                        请选择X轴字段
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="yAxis" class="form-label">Y轴字段 *</label>
+                                    <select class="form-select" id="yAxis" name="y_axis" required>
+                                        <option value="">请选择...</option>
+                                        <!-- 动态加载可用字段 -->
+                                    </select>
+                                    <div class="invalid-feedback">
+                                        请选择Y轴字段
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 图表预览 -->
+                        <div class="mb-4">
+                            <h5>图表预览</h5>
+                            <div id="chartPreview" style="width: 100%; height: 400px;"></div>
+                        </div>
+
+                        <!-- 可见性设置 -->
+                        <div class="mb-4">
+                            <h5>可见性设置</h5>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="isPublic" name="is_public" checked>
+                                <label class="form-check-label" for="isPublic">
+                                    公开图表（所有用户可见）
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="text-end">
+                            <button type="button" class="btn btn-secondary me-2" onclick="history.back()">取消</button>
+                            <button type="submit" class="btn btn-primary">创建图表</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('chartForm');
+    const chartPreview = echarts.init(document.getElementById('chartPreview'));
+    let previewOption = {};
+
+    // 表单验证
+    form.addEventListener('submit', function(event) {
+        event.preventDefault();
+        if (!form.checkValidity()) {
+            event.stopPropagation();
+            form.classList.add('was-validated');
+            return;
+        }
+
+        // 收集表单数据
+        const formData = new FormData(form);
+        const data = {
+            title: formData.get('title'),
+            description: formData.get('description'),
+            chart_type: formData.get('chart_type'),
+            data_type: formData.get('data_type'),
+            config: {
+                x_axis: formData.get('x_axis'),
+                y_axis: formData.get('y_axis')
+            },
+            is_public: formData.get('is_public') === 'on'
+        };
+
+        // 发送创建请求
+        fetch("{% url 'visualization:chart_create' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                window.location.href = `/visualization/charts/${result.chart_id}/`;
+            } else {
+                alert('创建失败：' + result.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('创建失败，请重试');
+        });
+    });
+
+    // 动态加载字段选项
+    function loadFields() {
+        const dataType = document.getElementById('dataType').value;
+        if (!dataType) return;
+
+        fetch(`/visualization/fields/?data_type=${dataType}`)
+            .then(response => response.json())
+            .then(fields => {
+                const xAxis = document.getElementById('xAxis');
+                const yAxis = document.getElementById('yAxis');
+                
+                // 清空现有选项
+                xAxis.innerHTML = '<option value="">请选择...</option>';
+                yAxis.innerHTML = '<option value="">请选择...</option>';
+                
+                // 添加新选项
+                fields.forEach(field => {
+                    xAxis.add(new Option(field.label, field.value));
+                    yAxis.add(new Option(field.label, field.value));
+                });
+            });
+    }
+
+    // 监听数据类型变化
+    document.getElementById('dataType').addEventListener('change', loadFields);
+
+    // 预览图表
+    function updatePreview() {
+        const chartType = document.getElementById('chartType').value;
+        const xAxis = document.getElementById('xAxis').value;
+        const yAxis = document.getElementById('yAxis').value;
+
+        if (!chartType || !xAxis || !yAxis) return;
+
+        // 获取预览数据
+        fetch(`/visualization/preview/?chart_type=${chartType}&x_axis=${xAxis}&y_axis=${yAxis}`)
+            .then(response => response.json())
+            .then(data => {
+                previewOption = {
+                    title: {
+                        text: document.getElementById('title').value || '图表预览'
+                    },
+                    tooltip: {
+                        trigger: 'axis'
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: data.labels
+                    },
+                    yAxis: {
+                        type: 'value'
+                    },
+                    series: data.datasets
+                };
+                chartPreview.setOption(previewOption);
+            });
+    }
+
+    // 监听表单变化更新预览
+    ['chartType', 'xAxis', 'yAxis', 'title'].forEach(id => {
+        document.getElementById(id).addEventListener('change', updatePreview);
+    });
+
+    // 响应窗口大小变化
+    window.addEventListener('resize', function() {
+        chartPreview.resize();
+    });
+});
+</script>
+{% endblock %} 

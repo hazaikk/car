@@ -1,0 +1,105 @@
+{% extends "visualization/base.html" %}
+
+{% block visualization_content %}
+<div class="container">
+    <h2 class="mb-4">数据可视化图表</h2>
+    
+    <!-- 筛选器 -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="chart_type" class="form-label">图表类型</label>
+                    <select class="form-select" id="chart_type" name="chart_type">
+                        <option value="">全部</option>
+                        {% for value, label in chart_types %}
+                        <option value="{{ value }}" {% if request.GET.chart_type == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="data_type" class="form-label">数据类型</label>
+                    <select class="form-select" id="data_type" name="data_type">
+                        <option value="">全部</option>
+                        {% for value, label in data_types %}
+                        <option value="{{ value }}" {% if request.GET.data_type == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="search" class="form-label">搜索</label>
+                    <input type="text" class="form-control" id="search" name="search" value="{{ request.GET.search }}" placeholder="输入关键词搜索...">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">筛选</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- 图表列表 -->
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+        {% for chart in charts %}
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">{{ chart.title }}</h5>
+                    <p class="card-text text-muted">{{ chart.description|truncatechars:100 }}</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="btn-group">
+                            <a href="{% url 'visualization:chart_detail' chart.id %}" class="btn btn-sm btn-outline-primary">查看</a>
+                            {% if user == chart.created_by %}
+                            <a href="{% url 'visualization:chart_edit' chart.id %}" class="btn btn-sm btn-outline-secondary">编辑</a>
+                            {% endif %}
+                        </div>
+                        <small class="text-muted">{{ chart.created_at|date:"Y-m-d" }}</small>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <small class="text-muted">
+                        <i class="fas fa-chart-{{ chart.chart_type }} me-2"></i>{{ chart.get_chart_type_display }}
+                        <span class="mx-2">|</span>
+                        <i class="fas fa-database me-2"></i>{{ chart.get_data_type_display }}
+                    </small>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info" role="alert">
+                暂无图表数据
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- 分页 -->
+    {% if is_paginated %}
+    <nav aria-label="Page navigation" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+            {% endif %}
+            
+            {% for num in page_obj.paginator.page_range %}
+            <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+            </li>
+            {% endfor %}
+            
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %} 

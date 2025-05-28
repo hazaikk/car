@@ -1,41 +1,54 @@
-{% extends 'base.html' %}
-{% block title %}注册 - 汽车数据平台{% endblock %}
-{% block extra_css %}
-<style>
-.signup-container { max-width: 400px; margin: 60px auto; padding: 2rem; background: #fff; border-radius: 10px; box-shadow: 0 2px 16px rgba(0,0,0,0.08); }
-.signup-title { text-align: center; margin-bottom: 1.5rem; font-weight: bold; }
-</style>
-{% endblock %}
+{% extends "base.html" %}
+
 {% block content %}
-<div class="signup-container">
-    <h2 class="signup-title">注册新账号</h2>
-    <form method="post" action="{% url 'account_signup' %}">
-        {% csrf_token %}
-        {{ form.non_field_errors }}
-        <div class="mb-3">
-            <label for="id_username" class="form-label">用户名</label>
-            <input type="text" name="username" class="form-control" id="id_username" value="{{ form.username.value|default:'' }}">
-            {{ form.username.errors }}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="text-center">用户注册</h3>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                    <div class="messages">
+                        {% for message in messages %}
+                        <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %}">
+                            {{ message }}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <form method="post" action="{% url 'accounts:signup' %}">
+                        {% csrf_token %}
+                        <div class="form-group mb-3">
+                            <label for="username">用户名</label>
+                            <input type="text" class="form-control" id="username" name="username" required>
+                            <small class="form-text text-muted">用户名将用于登录，请使用字母、数字和下划线</small>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label for="email">邮箱</label>
+                            <input type="email" class="form-control" id="email" name="email" required>
+                            <small class="form-text text-muted">邮箱将用于找回密码，请确保填写正确</small>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label for="password1">密码</label>
+                            <input type="password" class="form-control" id="password1" name="password1" required>
+                            <small class="form-text text-muted">密码至少包含8个字符</small>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label for="password2">确认密码</label>
+                            <input type="password" class="form-control" id="password2" name="password2" required>
+                            <small class="form-text text-muted">请再次输入密码以确认</small>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">注册</button>
+                    </form>
+                    <div class="text-center mt-3">
+                        <p>已有账号？ <a href="{% url 'accounts:login' %}">立即登录</a></p>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="mb-3">
-            <label for="id_email" class="form-label">邮箱</label>
-            <input type="email" name="email" class="form-control" id="id_email" value="{{ form.email.value|default:'' }}">
-            {{ form.email.errors }}
-        </div>
-        <div class="mb-3">
-            <label for="id_password1" class="form-label">密码</label>
-            <input type="password" name="password1" class="form-control" id="id_password1">
-            {{ form.password1.errors }}
-        </div>
-        <div class="mb-3">
-            <label for="id_password2" class="form-label">确认密码</label>
-            <input type="password" name="password2" class="form-control" id="id_password2">
-            {{ form.password2.errors }}
-        </div>
-        <button type="submit" class="btn btn-success w-100">注册</button>
-    </form>
-    <div class="mt-3 text-center">
-        已有账号？<a href="{% url 'account_login' %}">立即登录</a>
     </div>
 </div>
 {% endblock %}

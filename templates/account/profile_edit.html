@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">编辑个人资料</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <!-- 头像上传 -->
+                        <div class="mb-4 text-center">
+                            <div class="position-relative d-inline-block">
+                                <img src="{{ profile.get_avatar_url }}" class="rounded-circle" width="150" height="150" id="avatar-preview" alt="头像">
+                                <label for="avatar-upload" class="position-absolute bottom-0 end-0 btn btn-sm btn-primary rounded-circle" style="cursor: pointer;">
+                                    <i class="fas fa-camera"></i>
+                                </label>
+                            </div>
+                            <input type="file" id="avatar-upload" name="avatar" class="d-none" accept="image/*">
+                        </div>
+
+                        <!-- 基本信息 -->
+                        <h5 class="mb-3">基本信息 <small class="text-muted">(带 * 为必填项)</small></h5>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="first_name" class="form-label">名字</label>
+                                    <input type="text" class="form-control" id="first_name" name="first_name" value="{{ user.first_name }}">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="last_name" class="form-label">姓氏</label>
+                                    <input type="text" class="form-control" id="last_name" name="last_name" value="{{ user.last_name }}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="email" class="form-label">邮箱 *</label>
+                            <input type="email" class="form-control" id="email" name="email" value="{{ user.email }}" required>
+                            <div class="form-text">用于接收重要通知和找回密码</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="bio" class="form-label">个人简介</label>
+                            <textarea class="form-control" id="bio" name="bio" rows="3" placeholder="介绍一下你自己吧...">{{ profile.bio }}</textarea>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="birth_date" class="form-label">出生日期</label>
+                                    <input type="date" class="form-control" id="birth_date" name="birth_date" value="{{ profile.birth_date|date:'Y-m-d' }}">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="gender" class="form-label">性别</label>
+                                    <select class="form-select" id="gender" name="gender">
+                                        <option value="">请选择</option>
+                                        {% for value, label in profile.GENDER_CHOICES %}
+                                        <option value="{{ value }}" {% if profile.gender == value %}selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 联系方式 -->
+                        <h5 class="mb-3">联系方式</h5>
+                        <div class="mb-3">
+                            <label for="phone" class="form-label">电话</label>
+                            <input type="tel" class="form-control" id="phone" name="phone" value="{{ profile.phone }}" placeholder="选填">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="address" class="form-label">地址</label>
+                            <input type="text" class="form-control" id="address" name="address" value="{{ profile.address }}" placeholder="选填">
+                        </div>
+
+                        <!-- 教育和工作 -->
+                        <h5 class="mb-3">教育和工作</h5>
+                        <div class="mb-3">
+                            <label for="education" class="form-label">学历</label>
+                            <select class="form-select" id="education" name="education">
+                                <option value="">请选择</option>
+                                {% for value, label in profile.EDUCATION_CHOICES %}
+                                <option value="{{ value }}" {% if profile.education == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="occupation" class="form-label">职业</label>
+                            <input type="text" class="form-control" id="occupation" name="occupation" value="{{ profile.occupation }}" placeholder="选填">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="company" class="form-label">公司</label>
+                            <input type="text" class="form-control" id="company" name="company" value="{{ profile.company }}" placeholder="选填">
+                        </div>
+
+                        <!-- 社交媒体 -->
+                        <h5 class="mb-3">社交媒体</h5>
+                        <div class="mb-3">
+                            <label for="website" class="form-label">个人网站</label>
+                            <input type="text" class="form-control" id="website" name="website" value="{{ profile.website|default:'' }}" placeholder="http://example.com（选填）">
+                            <div class="form-text">如果填写，请输入完整的网址，包括 http:// 或 https://</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="social_github" class="form-label">GitHub</label>
+                            <input type="text" class="form-control" id="social_github" name="social_github" value="{{ profile.social_github|default:'' }}" placeholder="https://github.com/username（选填）">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="social_weibo" class="form-label">微博</label>
+                            <input type="text" class="form-control" id="social_weibo" name="social_weibo" value="{{ profile.social_weibo|default:'' }}" placeholder="https://weibo.com/username（选填）">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="social_wechat" class="form-label">微信</label>
+                            <input type="text" class="form-control" id="social_wechat" name="social_wechat" value="{{ profile.social_wechat }}" placeholder="选填">
+                        </div>
+
+                        <!-- 兴趣爱好 -->
+                        <h5 class="mb-3">兴趣爱好</h5>
+                        <div class="mb-3">
+                            <label for="interests" class="form-label">兴趣爱好</label>
+                            <textarea class="form-control" id="interests" name="interests" rows="3" placeholder="分享你的兴趣爱好...">{{ profile.interests }}</textarea>
+                        </div>
+
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-primary">保存修改</button>
+                            <a href="{% url 'accounts:profile' %}" class="btn btn-outline-secondary ms-2">返回</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.form-label {
+    font-weight: 500;
+}
+.form-label:after {
+    content: " *";
+    color: red;
+    display: none;
+}
+.form-label.required:after {
+    display: inline;
+}
+.form-text {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('avatar-upload').addEventListener('change', function(e) {
+    if (this.files && this.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('avatar-preview').src = e.target.result;
+        };
+        reader.readAsDataURL(this.files[0]);
+        
+        // 自动上传头像
+        const formData = new FormData();
+        formData.append('avatar', this.files[0]);
+        
+        fetch("{% url 'accounts:avatar_upload' %}", {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (!data.success) {
+                alert('头像上传失败：' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('头像上传失败，请重试');
+        });
+    }
+});
+</script>
+{% endblock %} 

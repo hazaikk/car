@@ -1,0 +1,177 @@
+{% extends "visualization/base.html" %}
+
+{% block visualization_content %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <!-- 图表标题和描述 -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2>{{ chart.title }}</h2>
+                    <p class="text-muted">{{ chart.description }}</p>
+                </div>
+                <div class="btn-group">
+                    {% if user == chart.created_by %}
+                    <a href="{% url 'visualization:chart_edit' chart.id %}" class="btn btn-outline-primary">
+                        <i class="fas fa-edit me-2"></i>编辑
+                    </a>
+                    {% endif %}
+                    <button class="btn btn-outline-secondary" id="exportImage">
+                        <i class="fas fa-download me-2"></i>导出图片
+                    </button>
+                    <button class="btn btn-outline-secondary" id="exportData">
+                        <i class="fas fa-file-excel me-2"></i>导出数据
+                    </button>
+                </div>
+            </div>
+
+            <!-- 筛选条件 -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form id="filterForm" class="row g-3">
+                        <!-- 时间范围 -->
+                        <div class="col-md-3">
+                            <label class="form-label">时间范围</label>
+                            <div class="input-group">
+                                <input type="date" class="form-control" id="startDate" name="start_date">
+                                <span class="input-group-text">至</span>
+                                <input type="date" class="form-control" id="endDate" name="end_date">
+                            </div>
+                        </div>
+                        
+                        <!-- 品牌选择 -->
+                        <div class="col-md-2">
+                            <label for="brand" class="form-label">品牌</label>
+                            <select class="form-select" id="brand" name="brand">
+                                <option value="">全部</option>
+                                {% for brand in brands %}
+                                <option value="{{ brand.id }}">{{ brand.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <!-- 价格区间 -->
+                        <div class="col-md-3">
+                            <label class="form-label">价格区间</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="minPrice" name="min_price" placeholder="最低价">
+                                <span class="input-group-text">-</span>
+                                <input type="number" class="form-control" id="maxPrice" name="max_price" placeholder="最高价">
+                            </div>
+                        </div>
+                        
+                        <!-- 地区选择 -->
+                        <div class="col-md-2">
+                            <label for="region" class="form-label">地区</label>
+                            <select class="form-select" id="region" name="region">
+                                <option value="">全部</option>
+                                {% for region in regions %}
+                                <option value="{{ region.id }}">{{ region.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100">应用筛选</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 图表容器 -->
+            <div class="card">
+                <div class="card-body">
+                    <div id="chartContainer" style="width: 100%; height: 600px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 初始化ECharts实例
+    var chartDom = document.getElementById('chartContainer');
+    var myChart = echarts.init(chartDom);
+    var option;
+
+    // 加载图表数据
+    function loadChartData(filters = {}) {
+        fetch("{% url 'visualization:chart_data' chart.id %}" + '?' + new URLSearchParams(filters))
+            .then(response => response.json())
+            .then(data => {
+                option = {
+                    title: {
+                        text: '{{ chart.title }}'
+                    },
+                    tooltip: {
+                        trigger: 'axis'
+                    },
+                    legend: {
+                        data: data.legend
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: data.labels
+                    },
+                    yAxis: {
+                        type: 'value'
+                    },
+                    series: data.datasets
+                };
+                myChart.setOption(option);
+            })
+            .catch(error => console.error('Error:', error));
+    }
+
+    // 初始加载
+    loadChartData();
+
+    // 监听筛选表单提交
+    document.getElementById('filterForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        const filters = Object.fromEntries(formData.entries());
+        loadChartData(filters);
+    });
+
+    // 导出图片
+    document.getElementById('exportImage').addEventListener('click', function() {
+        const image = myChart.getDataURL();
+        const link = document.createElement('a');
+        link.download = '{{ chart.title }}.png';
+        link.href = image;
+        link.click();
+    });
+
+    // 导出数据
+    document.getElementById('exportData').addEventListener('click', function() {
+        fetch("{% url 'visualization:chart_data' chart.id %}")
+            .then(response => response.json())
+            .then(data => {
+                // 将数据转换为CSV格式
+                let csv = 'data:text/csv;charset=utf-8,';
+                // 添加表头
+                csv += data.labels.join(',') + '\n';
+                // 添加数据
+                data.datasets.forEach(dataset => {
+                    csv += dataset.data.join(',') + '\n';
+                });
+                
+                const link = document.createElement('a');
+                link.download = '{{ chart.title }}.csv';
+                link.href = encodeURI(csv);
+                link.click();
+            });
+    });
+
+    // 响应窗口大小变化
+    window.addEventListener('resize', function() {
+        myChart.resize();
+    });
+});
+</script>
+{% endblock %} 

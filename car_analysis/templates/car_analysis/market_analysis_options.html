@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}市场分析 - 选择细分市场 - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'car_analysis:home' %}">智能分析</a></li>
+            <li class="breadcrumb-item active">选择细分市场</li>
+        </ol>
+    </nav>
+
+    <div class="row mb-4">
+        <div class="col">
+            <h1>选择细分市场</h1>
+            <p class="text-muted">请选择要分析的细分市场和时间范围</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-body">
+                    <form id="analysisForm" method="get" action="{% url 'car_analysis:market_analysis' %}">
+                        <div class="mb-3">
+                            <label for="segment" class="form-label">细分市场</label>
+                            <select class="form-select" id="segment" name="segment" required>
+                                <option value="">请选择细分市场</option>
+                                {% for code, name in segments %}
+                                <option value="{{ code }}">{{ name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="type" class="form-label">分析类型</label>
+                            <select class="form-select" id="type" name="type">
+                                <option value="segment">细分市场分析</option>
+                                <option value="competition">竞争态势分析</option>
+                                <option value="trend">市场趋势分析</option>
+                            </select>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="start_date" class="form-label">开始日期</label>
+                                <input type="date" class="form-control" id="start_date" name="start_date">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="end_date" class="form-label">结束日期</label>
+                                <input type="date" class="form-control" id="end_date" name="end_date">
+                            </div>
+                        </div>
+
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-chart-line"></i> 开始分析
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 设置默认日期范围（最近一年）
+    const today = new Date();
+    const lastYear = new Date();
+    lastYear.setFullYear(today.getFullYear() - 1);
+    
+    document.getElementById('end_date').value = today.toISOString().split('T')[0];
+    document.getElementById('start_date').value = lastYear.toISOString().split('T')[0];
+    
+    // 表单验证
+    document.getElementById('analysisForm').addEventListener('submit', function(e) {
+        const segment = document.getElementById('segment').value;
+        const startDate = document.getElementById('start_date').value;
+        const endDate = document.getElementById('end_date').value;
+        
+        if (!segment) {
+            e.preventDefault();
+            alert('请选择细分市场');
+            return;
+        }
+        
+        if (!startDate || !endDate) {
+            e.preventDefault();
+            alert('请选择分析时间范围');
+            return;
+        }
+        
+        if (new Date(startDate) > new Date(endDate)) {
+            e.preventDefault();
+            alert('开始日期不能晚于结束日期');
+            return;
+        }
+    });
+});
+</script>
+{% endblock %} 

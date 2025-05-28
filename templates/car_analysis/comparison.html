@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>竞品对比</h2>
+    
+    <!-- 车型选择 -->
+    <div class="card mt-4">
+        <div class="card-body">
+            <h5 class="card-title">选择对比车型</h5>
+            <div class="row">
+                <div class="col-md-4">
+                    <select class="form-select" id="car1">
+                        <option selected>选择第一个车型...</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <select class="form-select" id="car2">
+                        <option selected>选择第二个车型...</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <select class="form-select" id="car3">
+                        <option selected>选择第三个车型...</option>
+                    </select>
+                </div>
+            </div>
+            <div class="text-center mt-3">
+                <button class="btn btn-primary" id="compareBtn">开始对比</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 对比结果 -->
+    <div class="row mt-4">
+        <!-- 基本信息对比 -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">基本信息对比</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>对比项</th>
+                                    <th>车型1</th>
+                                    <th>车型2</th>
+                                    <th>车型3</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>厂商指导价</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td>上市时间</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td>销量</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 性能参数对比 -->
+        <div class="col-12 mt-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">性能参数对比</h5>
+                </div>
+                <div class="card-body">
+                    <div id="performanceChart" style="height: 400px;"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 用户评价对比 -->
+        <div class="col-12 mt-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">用户评价对比</h5>
+                </div>
+                <div class="card-body">
+                    <div id="ratingChart" style="height: 400px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 初始化图表
+    const performanceChart = echarts.init(document.getElementById('performanceChart'));
+    const ratingChart = echarts.init(document.getElementById('ratingChart'));
+    
+    // 性能参数图表配置
+    const performanceOption = {
+        title: {
+            text: '性能参数雷达图'
+        },
+        tooltip: {},
+        legend: {
+            data: ['车型1', '车型2', '车型3']
+        },
+        radar: {
+            indicator: [
+                { name: '动力', max: 100 },
+                { name: '操控', max: 100 },
+                { name: '舒适性', max: 100 },
+                { name: '油耗', max: 100 },
+                { name: '空间', max: 100 }
+            ]
+        },
+        series: [{
+            type: 'radar',
+            data: [
+                {
+                    value: [0, 0, 0, 0, 0],
+                    name: '车型1'
+                },
+                {
+                    value: [0, 0, 0, 0, 0],
+                    name: '车型2'
+                },
+                {
+                    value: [0, 0, 0, 0, 0],
+                    name: '车型3'
+                }
+            ]
+        }]
+    };
+    
+    // 用户评价图表配置
+    const ratingOption = {
+        title: {
+            text: '用户评分对比'
+        },
+        tooltip: {},
+        legend: {
+            data: ['车型1', '车型2', '车型3']
+        },
+        xAxis: {
+            data: ['综合评分', '外观', '内饰', '配置', '动力', '操控', '油耗', '舒适性']
+        },
+        yAxis: {
+            type: 'value',
+            max: 5
+        },
+        series: [
+            {
+                name: '车型1',
+                type: 'bar',
+                data: [0, 0, 0, 0, 0, 0, 0, 0]
+            },
+            {
+                name: '车型2',
+                type: 'bar',
+                data: [0, 0, 0, 0, 0, 0, 0, 0]
+            },
+            {
+                name: '车型3',
+                type: 'bar',
+                data: [0, 0, 0, 0, 0, 0, 0, 0]
+            }
+        ]
+    };
+    
+    // 渲染图表
+    performanceChart.setOption(performanceOption);
+    ratingChart.setOption(ratingOption);
+    
+    // 响应窗口大小变化
+    window.addEventListener('resize', function() {
+        performanceChart.resize();
+        ratingChart.resize();
+    });
+});
+</script>
+{% endblock %} 

@@ -14,50 +14,79 @@
 <body>
     <!-- 导航栏 -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container">
-            <a class="navbar-brand" href="{% url 'dashboard:index' %}">汽车数据平台</a>
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">汽车数据平台</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'dashboard:index' %}">首页</a>
+                        <a class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}" href="/">
+                            <i class="fas fa-home me-1"></i>首页
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#">数据图表</a>
+                        <a class="nav-link {% if 'visualization' in request.path %}active{% endif %}" href="{% url 'visualization:chart_list' %}">
+                            <i class="fas fa-chart-bar me-1"></i>数据图表
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#">智能分析</a>
+                        <a class="nav-link {% if 'analysis' in request.path %}active{% endif %}" href="{% url 'car_analysis:index' %}">
+                            <i class="fas fa-brain me-1"></i>智能分析
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#">竞品对比</a>
+                        <a class="nav-link {% if 'comparison' in request.path %}active{% endif %}" href="{% url 'car_analysis:comparison' %}">
+                            <i class="fas fa-balance-scale me-1"></i>竞品对比
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#">API文档</a>
+                        <a class="nav-link {% if 'api' in request.path %}active{% endif %}" href="{% url 'car_api:docs' %}">
+                            <i class="fas fa-code me-1"></i>API文档
+                        </a>
                     </li>
                 </ul>
+                
+                <!-- 用户菜单 -->
                 <ul class="navbar-nav">
                     {% if user.is_authenticated %}
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                            <img src="{{ user.profile.get_avatar_url }}" class="rounded-circle me-1" width="24" height="24" alt="头像">
                             {{ user.username }}
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="#">个人资料</a></li>
+                            <li>
+                                <a class="dropdown-item" href="{% url 'accounts:profile' %}">
+                                    <i class="fas fa-user me-2"></i>个人资料
+                                </a>
+                            </li>
                             {% if user.is_staff %}
-                            <li><a class="dropdown-item" href="{% url 'admin:index' %}">管理后台</a></li>
+                            <li>
+                                <a class="dropdown-item" href="{% url 'admin:index' %}">
+                                    <i class="fas fa-cog me-2"></i>后台管理
+                                </a>
+                            </li>
                             {% endif %}
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{% url 'account_logout' %}">退出登录</a></li>
+                            <li>
+                                <a class="dropdown-item" href="{% url 'accounts:logout' %}">
+                                    <i class="fas fa-sign-out-alt me-2"></i>退出登录
+                                </a>
+                            </li>
                         </ul>
                     </li>
                     {% else %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'account_login' %}">登录</a>
+                        <a class="nav-link" href="{% url 'accounts:login' %}">
+                            <i class="fas fa-sign-in-alt me-1"></i>登录
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'account_signup' %}">注册</a>
+                        <a class="nav-link" href="{% url 'accounts:signup' %}">
+                            <i class="fas fa-user-plus me-1"></i>注册
+                        </a>
                     </li>
                     {% endif %}
                 </ul>

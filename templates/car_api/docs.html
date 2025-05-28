@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>API 文档</h2>
+    
+    <!-- API 概述 -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h3>概述</h3>
+            <p>本API提供汽车数据的访问接口，支持查询车型信息、价格、销量等数据。所有请求都需要进行身份验证。</p>
+            
+            <h4>认证</h4>
+            <p>API使用Token认证，请在请求头中添加：</p>
+            <pre><code>Authorization: Token your-token-here</code></pre>
+        </div>
+    </div>
+    
+    <!-- API 端点列表 -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="mb-0">API 端点</h3>
+        </div>
+        <div class="card-body">
+            <!-- 车型信息 API -->
+            <div class="mb-4">
+                <h4>车型信息</h4>
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>端点</th>
+                                <th>方法</th>
+                                <th>描述</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>/api/v1/cars/</code></td>
+                                <td>GET</td>
+                                <td>获取车型列表</td>
+                            </tr>
+                            <tr>
+                                <td><code>/api/v1/cars/{id}/</code></td>
+                                <td>GET</td>
+                                <td>获取特定车型详情</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- 价格数据 API -->
+            <div class="mb-4">
+                <h4>价格数据</h4>
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>端点</th>
+                                <th>方法</th>
+                                <th>描述</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>/api/v1/prices/</code></td>
+                                <td>GET</td>
+                                <td>获取价格数据</td>
+                            </tr>
+                            <tr>
+                                <td><code>/api/v1/prices/trends/</code></td>
+                                <td>GET</td>
+                                <td>获取价格趋势数据</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- 销量数据 API -->
+            <div class="mb-4">
+                <h4>销量数据</h4>
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>端点</th>
+                                <th>方法</th>
+                                <th>描述</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>/api/v1/sales/</code></td>
+                                <td>GET</td>
+                                <td>获取销量数据</td>
+                            </tr>
+                            <tr>
+                                <td><code>/api/v1/sales/analysis/</code></td>
+                                <td>GET</td>
+                                <td>获取销量分析数据</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

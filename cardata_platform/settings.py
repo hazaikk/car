@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -50,9 +51,10 @@ INSTALLED_APPS = [
     # 自定义应用
     "accounts",
     "dashboard",
-    "data_analysis",
-    "api",
+    "car_analysis",
+    "car_api",
     "crawler",
+    "visualization",  # 新增数据可视化应用
 ]
 
 MIDDLEWARE = [
@@ -136,7 +138,7 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -181,3 +183,8 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
 }
+
+# 确保头像目录存在
+AVATAR_UPLOAD_DIR = os.path.join(MEDIA_ROOT, 'avatars')
+if not os.path.exists(AVATAR_UPLOAD_DIR):
+    os.makedirs(AVATAR_UPLOAD_DIR, exist_ok=True)

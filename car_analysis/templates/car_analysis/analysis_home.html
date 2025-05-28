@@ -1,0 +1,172 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}智能分析 - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="mb-4">智能分析</h1>
+    
+    <div class="row">
+        <!-- 销量预测 -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">销量预测</h5>
+                    <p class="card-text">基于历史数据预测未来销量趋势，帮助您做出更明智的决策。</p>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-chart-line"></i> 销量趋势分析</li>
+                        <li><i class="fas fa-calendar-alt"></i> 未来6个月预测</li>
+                        <li><i class="fas fa-percentage"></i> 预测准确度评估</li>
+                    </ul>
+                </div>
+                <div class="card-footer">
+                    <a href="#" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#carSelectModal" data-analysis-type="sales">
+                        开始分析
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 价格分析 -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">价格分析</h5>
+                    <p class="card-text">分析价格变动趋势，预测未来价格走势，把握最佳购买时机。</p>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-chart-bar"></i> 价格趋势分析</li>
+                        <li><i class="fas fa-arrows-alt-v"></i> 价格区间分布</li>
+                        <li><i class="fas fa-clock"></i> 未来价格预测</li>
+                    </ul>
+                </div>
+                <div class="card-footer">
+                    <a href="#" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#carSelectModal" data-analysis-type="price">
+                        开始分析
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 市场分析 -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">市场分析</h5>
+                    <p class="card-text">深入分析细分市场的竞争态势，了解市场份额和品牌表现。</p>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-users"></i> 细分市场分析</li>
+                        <li><i class="fas fa-trophy"></i> 品牌竞争力分析</li>
+                        <li><i class="fas fa-chart-pie"></i> 市场份额分布</li>
+                    </ul>
+                </div>
+                <div class="card-footer">
+                    <a href="{% url 'car_analysis:market_analysis' %}" class="btn btn-primary">
+                        开始分析
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 车型选择模态框 -->
+<div class="modal fade" id="carSelectModal" tabindex="-1" aria-labelledby="carSelectModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="carSelectModalLabel">选择车型</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="carSelectForm">
+                    <div class="mb-3">
+                        <label for="brandSelect" class="form-label">品牌</label>
+                        <select class="form-select" id="brandSelect" required>
+                            <option value="">请选择品牌</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="modelSelect" class="form-label">车型</label>
+                        <select class="form-select" id="modelSelect" required>
+                            <option value="">请先选择品牌</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" id="startAnalysis">开始分析</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const brandSelect = document.getElementById('brandSelect');
+    const modelSelect = document.getElementById('modelSelect');
+    const startAnalysisBtn = document.getElementById('startAnalysis');
+    let currentAnalysisType = '';
+    
+    // 加载品牌列表
+    fetch('/api/brands/')
+        .then(response => response.json())
+        .then(data => {
+            data.forEach(brand => {
+                const option = document.createElement('option');
+                option.value = brand.id;
+                option.textContent = brand.name;
+                brandSelect.appendChild(option);
+            });
+        });
+    
+    // 品牌选择变化时加载对应车型
+    brandSelect.addEventListener('change', function() {
+        modelSelect.innerHTML = '<option value="">请选择车型</option>';
+        if (this.value) {
+            fetch(`/api/brands/${this.value}/models/`)
+                .then(response => response.json())
+                .then(data => {
+                    data.forEach(model => {
+                        const option = document.createElement('option');
+                        option.value = model.id;
+                        option.textContent = model.name;
+                        modelSelect.appendChild(option);
+                    });
+                });
+        }
+    });
+    
+    // 记录当前分析类型
+    document.querySelectorAll('[data-analysis-type]').forEach(btn => {
+        btn.addEventListener('click', function() {
+            currentAnalysisType = this.dataset.analysisType;
+        });
+    });
+    
+    // 开始分析按钮点击事件
+    startAnalysisBtn.addEventListener('click', function() {
+        const modelId = modelSelect.value;
+        if (!modelId) {
+            alert('请选择车型');
+            return;
+        }
+        
+        let url;
+        if (currentAnalysisType === 'sales') {
+            url = `/analysis/sales/${modelId}/`;
+        } else if (currentAnalysisType === 'price') {
+            url = `/analysis/price/${modelId}/`;
+        }
+        
+        if (url) {
+            window.location.href = url;
+        }
+    });
+});
+</script>
+{% endblock %} 

@@ -1,0 +1,276 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}市场分析 - {{ segment }} - {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'car_analysis:home' %}">智能分析</a></li>
+            <li class="breadcrumb-item active">市场分析</li>
+        </ol>
+    </nav>
+
+    <div class="row mb-4">
+        <div class="col">
+            <h1>{{ segment }} 市场分析</h1>
+            <p class="text-muted">
+                分析周期：{{ start_date|date:"Y-m-d" }} 至 {{ end_date|date:"Y-m-d" }}
+                <button class="btn btn-sm btn-outline-primary ms-2" id="refreshBtn">
+                    <i class="fas fa-sync-alt"></i> 刷新分析
+                </button>
+            </p>
+        </div>
+    </div>
+
+    <!-- 市场洞察 -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">市场洞察</h5>
+                    <div class="insights">
+                        {% for insight in analysis.insights.split|linebreaksbr %}
+                        <p>{{ insight }}</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- 市场概览 -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">市场概览</h5>
+                    <div id="marketOverview">
+                        <!-- 由JavaScript填充市场概览数据 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 品牌市场份额 -->
+        <div class="col-md-8 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">品牌市场份额</h5>
+                    <div id="marketShareChart" style="height: 400px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- 品牌销量对比 -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">品牌销量对比</h5>
+                    <div id="salesCompareChart" style="height: 400px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 价格分布对比 -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">价格分布对比</h5>
+                    <div id="priceCompareChart" style="height: 400px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const marketShareChart = echarts.init(document.getElementById('marketShareChart'));
+    const salesCompareChart = echarts.init(document.getElementById('salesCompareChart'));
+    const priceCompareChart = echarts.init(document.getElementById('priceCompareChart'));
+    let analysisData = {{ analysis.analysis_data|safe }};
+    
+    function updateMarketOverview() {
+        const overview = analysisData.segment_overview;
+        document.getElementById('marketOverview').innerHTML = `
+            <div class="mb-3">
+                <small class="text-muted">车型数量</small>
+                <h3>${overview.total_models}款</h3>
+            </div>
+            <div class="mb-3">
+                <small class="text-muted">平均售价</small>
+                <h3>${overview.avg_price.toFixed(2)}万元</h3>
+            </div>
+            <div class="mb-3">
+                <small class="text-muted">总销量</small>
+                <h3>${overview.total_sales.toLocaleString()}辆</h3>
+            </div>
+        `;
+    }
+    
+    function updateMarketShareChart() {
+        const brandPerformance = analysisData.brand_performance;
+        const option = {
+            tooltip: {
+                trigger: 'item',
+                formatter: '{b}: {c}% ({d}%)'
+            },
+            legend: {
+                orient: 'vertical',
+                right: 10,
+                top: 'center'
+            },
+            series: [{
+                name: '市场份额',
+                type: 'pie',
+                radius: ['40%', '70%'],
+                avoidLabelOverlap: false,
+                label: {
+                    show: false,
+                    position: 'center'
+                },
+                emphasis: {
+                    label: {
+                        show: true,
+                        fontSize: '18',
+                        fontWeight: 'bold'
+                    }
+                },
+                labelLine: {
+                    show: false
+                },
+                data: brandPerformance.map(item => ({
+                    name: item.brand,
+                    value: item.market_share.toFixed(1)
+                }))
+            }]
+        };
+        
+        marketShareChart.setOption(option);
+    }
+    
+    function updateSalesCompareChart() {
+        const brandPerformance = analysisData.brand_performance;
+        const option = {
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: {
+                    type: 'shadow'
+                }
+            },
+            xAxis: {
+                type: 'value',
+                name: '销量（辆）'
+            },
+            yAxis: {
+                type: 'category',
+                data: brandPerformance.map(item => item.brand),
+                inverse: true
+            },
+            series: [{
+                name: '总销量',
+                type: 'bar',
+                data: brandPerformance.map(item => item.total_sales),
+                label: {
+                    show: true,
+                    position: 'right'
+                }
+            }]
+        };
+        
+        salesCompareChart.setOption(option);
+    }
+    
+    function updatePriceCompareChart() {
+        const priceAnalysis = analysisData.price_analysis;
+        const option = {
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: {
+                    type: 'shadow'
+                },
+                formatter: function(params) {
+                    const data = params[0];
+                    return `${data.name}<br />
+                            平均售价：${data.value.toFixed(2)}万元<br />
+                            价格区间：${priceAnalysis[data.dataIndex].price_range.toFixed(2)}万元`;
+                }
+            },
+            xAxis: {
+                type: 'category',
+                data: priceAnalysis.map(item => item.brand)
+            },
+            yAxis: {
+                type: 'value',
+                name: '价格（万元）'
+            },
+            series: [{
+                name: '平均售价',
+                type: 'bar',
+                data: priceAnalysis.map(item => item.avg_price),
+                markLine: {
+                    data: [
+                        {type: 'average', name: '平均值'}
+                    ]
+                }
+            }]
+        };
+        
+        priceCompareChart.setOption(option);
+    }
+    
+    // 初始化显示
+    updateMarketOverview();
+    updateMarketShareChart();
+    updateSalesCompareChart();
+    updatePriceCompareChart();
+    
+    // 处理窗口大小变化
+    window.addEventListener('resize', function() {
+        marketShareChart.resize();
+        salesCompareChart.resize();
+        priceCompareChart.resize();
+    });
+    
+    // 刷新按钮点击事件
+    document.getElementById('refreshBtn').addEventListener('click', function() {
+        this.disabled = true;
+        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 刷新中...';
+        
+        const params = new URLSearchParams(window.location.search);
+        params.set('refresh', 'true');
+        
+        fetch(window.location.pathname + '?' + params.toString())
+            .then(response => response.json())
+            .then(data => {
+                analysisData = data.analysis_data;
+                
+                // 更新洞察
+                document.querySelector('.insights').innerHTML = data.insights.split('\n')
+                    .map(insight => `<p>${insight}</p>`).join('');
+                
+                // 更新图表和数据
+                updateMarketOverview();
+                updateMarketShareChart();
+                updateSalesCompareChart();
+                updatePriceCompareChart();
+            })
+            .finally(() => {
+                this.disabled = false;
+                this.innerHTML = '<i class="fas fa-sync-alt"></i> 刷新分析';
+            });
+    });
+});
+</script>
+{% endblock %} 
