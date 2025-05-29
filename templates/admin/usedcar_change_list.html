@@ -1,0 +1,64 @@
+{% extends 'admin/change_list.html' %}
+{% load static %}
+
+{% block object-tools-items %}
+    {{ block.super }}
+    <li>
+        <a href="{% url 'admin:crawler_usedcar_analysis' %}" class="grp-state-focus">交互式数据分析</a>
+    </li>
+{% endblock %}
+
+{% block result_list %}
+    <div class="results-summary">
+        <div class="summary-box">
+            <h3>总车辆数</h3>
+            <p>{{ cl.total_count }}</p>
+        </div>
+        <div class="summary-box">
+            <h3>平均价格</h3>
+            <p>{{ cl.avg_price|floatformat:2 }} 万元</p>
+        </div>
+        <div class="summary-box">
+            <h3>最低价格</h3>
+            <p>{{ cl.min_price|floatformat:2 }} 万元</p>
+        </div>
+        <div class="summary-box">
+            <h3>最高价格</h3>
+            <p>{{ cl.max_price|floatformat:2 }} 万元</p>
+        </div>
+    </div>
+    {{ block.super }}
+{% endblock %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <style>
+        .results-summary {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .summary-box {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            text-align: center;
+            min-width: 150px;
+            margin: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .summary-box h3 {
+            margin-top: 0;
+            color: #447e9b;
+            font-size: 14px;
+        }
+        .summary-box p {
+            font-size: 20px;
+            font-weight: bold;
+            margin: 5px 0 0;
+            color: #333;
+        }
+    </style>
+{% endblock %}

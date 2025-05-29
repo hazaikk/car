@@ -15,6 +15,19 @@
         height: 350px;
         margin-bottom: 20px;
     }
+    .analysis-card {
+        transition: all 0.3s ease;
+        border: 1px solid #e0e0e0;
+    }
+    .analysis-card:hover {
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        transform: translateY(-5px);
+    }
+    .analysis-icon {
+        font-size: 2.5rem;
+        margin-bottom: 15px;
+        color: #4e73df;
+    }
 </style>
 {% endblock %}
 
@@ -66,36 +79,75 @@
             </div>
             <div class="card-body">
                 <div class="row">
-                    <div class="col-md-4 mb-3">
-                        <div class="card h-100">
-                            <div class="card-body">
+                    <div class="col-md-3 mb-3">
+                        <div class="card h-100 analysis-card">
+                            <div class="card-body text-center">
+                                <div class="analysis-icon">
+                                    <i class="fas fa-chart-line"></i>
+                                </div>
+                                <h5 class="card-title">价格分析</h5>
+                                <p class="card-text">分析不同品牌、地区、年份的价格分布和趋势。</p>
+                            </div>
+                            <div class="card-footer text-center">
+                                <a href="{% url 'car_analysis:data_analysis:price_analysis' %}" class="btn btn-primary">查看分析</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card h-100 analysis-card">
+                            <div class="card-body text-center">
+                                <div class="analysis-icon">
+                                    <i class="fas fa-car"></i>
+                                </div>
                                 <h5 class="card-title">品牌分析</h5>
-                                <p class="card-text">分析各品牌的市场份额、价格区间和用户评价等数据。</p>
+                                <p class="card-text">分析各品牌的市场份额、价格区间和地区分布。</p>
                             </div>
-                            <div class="card-footer">
-                                <a href="{% url 'data_analysis:brand_analysis' %}" class="btn btn-primary">查看分析</a>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <div class="card h-100">
-                            <div class="card-body">
-                                <h5 class="card-title">价格趋势分析</h5>
-                                <p class="card-text">分析不同年份、不同品牌的价格变化趋势。</p>
-                            </div>
-                            <div class="card-footer">
-                                <a href="{% url 'data_analysis:price_trend_analysis' %}" class="btn btn-primary">查看分析</a>
+                            <div class="card-footer text-center">
+                                <a href="{% url 'car_analysis:data_analysis:brand_analysis' %}" class="btn btn-primary">查看分析</a>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-4 mb-3">
-                        <div class="card h-100">
-                            <div class="card-body">
-                                <h5 class="card-title">地区分布分析</h5>
-                                <p class="card-text">分析不同地区的车辆数量、价格差异等数据。</p>
+                    <div class="col-md-3 mb-3">
+                        <div class="card h-100 analysis-card">
+                            <div class="card-body text-center">
+                                <div class="analysis-icon">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                </div>
+                                <h5 class="card-title">地区分析</h5>
+                                <p class="card-text">分析不同地区的车辆数量、价格差异和品牌偏好。</p>
                             </div>
-                            <div class="card-footer">
-                                <a href="{% url 'data_analysis:region_distribution' %}" class="btn btn-primary">查看分析</a>
+                            <div class="card-footer text-center">
+                                <a href="{% url 'car_analysis:data_analysis:region_analysis' %}" class="btn btn-primary">查看分析</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card h-100 analysis-card">
+                            <div class="card-body text-center">
+                                <div class="analysis-icon">
+                                    <i class="fas fa-cogs"></i>
+                                </div>
+                                <h5 class="card-title">车辆属性分析</h5>
+                                <p class="card-text">分析燃料类型、变速箱、颜色等车辆属性的分布情况。</p>
+                            </div>
+                            <div class="card-footer text-center">
+                                <a href="{% url 'car_analysis:data_analysis:vehicle_attribute_analysis' %}" class="btn btn-primary">查看分析</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card h-100 analysis-card bg-gradient-primary text-white">
+                            <div class="card-body text-center">
+                                <div class="analysis-icon text-white">
+                                    <i class="fas fa-sliders-h"></i>
+                                </div>
+                                <h5 class="card-title">交互式数据分析</h5>
+                                <p class="card-text">自定义选择数据和分析功能，进行个性化的数据分析和可视化。</p>
+                            </div>
+                            <div class="card-footer text-center">
+                                <a href="{% url 'car_analysis:data_analysis:interactive_analysis' %}" class="btn btn-light">开始分析</a>
                             </div>
                         </div>
                     </div>
@@ -104,11 +156,57 @@
         </div>
     </div>
 </div>
+
+{% if latest_price_analysis or latest_brand_analysis or latest_region_analysis or latest_vehicle_analysis %}
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="card-title mb-0">最新分析结果</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% if latest_price_analysis %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">价格分析 - {{ latest_price_analysis.get_analysis_type_display }}</h5>
+                            </div>
+                            <div class="card-body">
+                                <p>{{ latest_price_analysis.summary|truncatewords:50 }}</p>
+                            </div>
+                            <div class="card-footer">
+                                <a href="{% url 'car_analysis:data_analysis:price_analysis' %}?type={{ latest_price_analysis.analysis_type }}" class="btn btn-sm btn-outline-primary">查看详情</a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if latest_brand_analysis %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">品牌分析 - {{ latest_brand_analysis.get_analysis_type_display }}</h5>
+                            </div>
+                            <div class="card-body">
+                                <p>{{ latest_brand_analysis.summary|truncatewords:50 }}</p>
+                            </div>
+                            <div class="card-footer">
+                                <a href="{% url 'car_analysis:data_analysis:brand_analysis' %}?type={{ latest_brand_analysis.analysis_type }}" class="btn btn-sm btn-outline-primary">查看详情</a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    // 如果需要在页面加载时执行一些JavaScript代码，可以在这里添加
     document.addEventListener('DOMContentLoaded', function() {
         console.log('数据分析页面已加载');
     });

@@ -1,0 +1,753 @@
+{% extends 'base.html' %}
+
+{% block title %}交互式数据分析 - 汽车之家数据可视化与智能分析平台{% endblock %}
+
+{% block extra_css %}
+<style>
+    .analysis-type-btn {
+        margin-bottom: 10px;
+    }
+    .analysis-type-btn.active {
+        background-color: #4e73df;
+        color: white;
+    }
+    .chart-container {
+        position: relative;
+        height: 400px;
+        margin-bottom: 20px;
+    }
+    .summary-card {
+        background-color: #f8f9fc;
+        border-left: 4px solid #4e73df;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    .filter-section {
+        background-color: #f8f9fc;
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 5px;
+    }
+    .result-section {
+        display: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">交互式数据分析</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="filter-section">
+                            <h5 class="mb-3">分析配置</h5>
+                            <form id="analysisForm" method="post">
+                                {% csrf_token %}
+                                <div class="row mb-3">
+                                    <div class="col-md-4">
+                                        <label for="analysisCategory" class="form-label">分析类别</label>
+                                        <select class="form-select" id="analysisCategory" name="analysis_category" required>
+                                            <option value="" selected disabled>请选择分析类别</option>
+                                            <option value="price">价格分析</option>
+                                            <option value="brand">品牌分析</option>
+                                            <option value="region">地区分析</option>
+                                            <option value="vehicle">车辆属性分析</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="analysisType" class="form-label">分析类型</label>
+                                        <select class="form-select" id="analysisType" name="analysis_type" required disabled>
+                                            <option value="" selected disabled>请先选择分析类别</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">数据过滤</label>
+                                        <button type="button" class="btn btn-outline-primary w-100" id="filterBtn" data-bs-toggle="modal" data-bs-target="#filterModal" disabled>
+                                            <i class="fas fa-filter"></i> 设置过滤条件
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                    <button type="submit" class="btn btn-primary" id="analyzeBtn">
+                                        <i class="fas fa-chart-bar"></i> 开始分析
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-4 result-section" id="resultSection">
+                    <div class="col-12">
+                        <div class="summary-card">
+                            <h5>分析摘要</h5>
+                            <p id="analysisSummary"></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row result-section" id="chartSection">
+                    <div class="col-lg-8">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold text-primary" id="chartTitle">分析图表</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="analysisChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-4">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold text-primary">数据统计</h6>
+                            </div>
+                            <div class="card-body">
+                                <div id="analysisStats">
+                                    <!-- 统计数据将通过JavaScript动态填充 -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row result-section" id="tableSection">
+                    <div class="col-12">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold text-primary">详细数据</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                                        <thead id="tableHead">
+                                            <!-- 表头将通过JavaScript动态填充 -->
+                                        </thead>
+                                        <tbody id="tableBody">
+                                            <!-- 表格数据将通过JavaScript动态填充 -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 过滤条件模态框 -->
+<div class="modal fade" id="filterModal" tabindex="-1" aria-labelledby="filterModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="filterModalLabel">设置过滤条件</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- 品牌过滤 -->
+                <div class="filter-group" id="brandFilter" style="display: none;">
+                    <h6>选择品牌</h6>
+                    <div class="row">
+                        {% for brand in brands %}
+                        <div class="col-md-3 mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input brand-checkbox" type="checkbox" value="{{ brand.id }}" id="brand{{ brand.id }}">
+                                <label class="form-check-label" for="brand{{ brand.id }}">
+                                    {{ brand.name }}
+                                </label>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <!-- 地区过滤 -->
+                <div class="filter-group" id="regionFilter" style="display: none;">
+                    <h6>选择地区</h6>
+                    <div class="row">
+                        {% for region in regions %}
+                        <div class="col-md-3 mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input region-checkbox" type="checkbox" value="{{ region }}" id="region{{ forloop.counter }}">
+                                <label class="form-check-label" for="region{{ forloop.counter }}">
+                                    {{ region }}
+                                </label>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <!-- 年份过滤 -->
+                <div class="filter-group" id="yearFilter" style="display: none;">
+                    <h6>选择年份范围</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label for="yearFrom" class="form-label">从</label>
+                            <input type="number" class="form-control" id="yearFrom" min="1990" max="2023">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="yearTo" class="form-label">至</label>
+                            <input type="number" class="form-control" id="yearTo" min="1990" max="2023">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 里程过滤 -->
+                <div class="filter-group" id="mileageFilter" style="display: none;">
+                    <h6>选择里程范围（万公里）</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label for="mileageFrom" class="form-label">从</label>
+                            <input type="number" class="form-control" id="mileageFrom" min="0" step="0.1">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="mileageTo" class="form-label">至</label>
+                            <input type="number" class="form-control" id="mileageTo" min="0" step="0.1">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" id="applyFilterBtn" data-bs-dismiss="modal">应用过滤条件</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 存储过滤条件
+    let filterData = {};
+    let currentCategory = '';
+    let currentType = '';
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        // 分析类别选择变化时更新分析类型选项
+        const categorySelect = document.getElementById('analysisCategory');
+        const typeSelect = document.getElementById('analysisType');
+        const filterBtn = document.getElementById('filterBtn');
+        
+        categorySelect.addEventListener('change', function() {
+            currentCategory = this.value;
+            typeSelect.disabled = false;
+            filterBtn.disabled = false;
+            
+            // 清空现有选项
+            typeSelect.innerHTML = '<option value="" selected disabled>请选择分析类型</option>';
+            
+            // 根据选择的分析类别添加对应的分析类型选项
+            if (this.value === 'price') {
+                {% for key, value in price_analysis_types.items %}
+                    addOption(typeSelect, '{{ key }}', '{{ value }}');
+                {% endfor %}
+            } else if (this.value === 'brand') {
+                {% for key, value in brand_analysis_types.items %}
+                    addOption(typeSelect, '{{ key }}', '{{ value }}');
+                {% endfor %}
+            } else if (this.value === 'region') {
+                {% for key, value in region_analysis_types.items %}
+                    addOption(typeSelect, '{{ key }}', '{{ value }}');
+                {% endfor %}
+            } else if (this.value === 'vehicle') {
+                {% for key, value in vehicle_analysis_types.items %}
+                    addOption(typeSelect, '{{ key }}', '{{ value }}');
+                {% endfor %}
+            }
+        });
+        
+        // 分析类型选择变化时更新过滤选项
+        typeSelect.addEventListener('change', function() {
+            currentType = this.value;
+        });
+        
+        // 点击过滤按钮时显示相应的过滤选项
+        filterBtn.addEventListener('click', function() {
+            // 隐藏所有过滤组
+            document.querySelectorAll('.filter-group').forEach(group => {
+                group.style.display = 'none';
+            });
+            
+            // 根据当前选择的分析类别和类型显示相应的过滤选项
+            if (currentCategory === 'price') {
+                if (currentType === 'brand_price') {
+                    document.getElementById('brandFilter').style.display = 'block';
+                } else if (currentType === 'region_price') {
+                    document.getElementById('regionFilter').style.display = 'block';
+                } else if (currentType === 'year_price') {
+                    document.getElementById('yearFilter').style.display = 'block';
+                } else if (currentType === 'mileage_price') {
+                    document.getElementById('mileageFilter').style.display = 'block';
+                }
+            } else if (currentCategory === 'brand') {
+                document.getElementById('brandFilter').style.display = 'block';
+            } else if (currentCategory === 'region') {
+                document.getElementById('regionFilter').style.display = 'block';
+            }
+        });
+        
+        // 应用过滤条件按钮点击事件
+        document.getElementById('applyFilterBtn').addEventListener('click', function() {
+            filterData = {};
+            
+            // 收集品牌过滤条件
+            if (document.getElementById('brandFilter').style.display !== 'none') {
+                const selectedBrands = [];
+                document.querySelectorAll('.brand-checkbox:checked').forEach(checkbox => {
+                    selectedBrands.push(checkbox.value);
+                });
+                if (selectedBrands.length > 0) {
+                    filterData.brands = selectedBrands;
+                }
+            }
+            
+            // 收集地区过滤条件
+            if (document.getElementById('regionFilter').style.display !== 'none') {
+                const selectedRegions = [];
+                document.querySelectorAll('.region-checkbox:checked').forEach(checkbox => {
+                    selectedRegions.push(checkbox.value);
+                });
+                if (selectedRegions.length > 0) {
+                    filterData.regions = selectedRegions;
+                }
+            }
+            
+            // 收集年份过滤条件
+            if (document.getElementById('yearFilter').style.display !== 'none') {
+                const yearFrom = document.getElementById('yearFrom').value;
+                const yearTo = document.getElementById('yearTo').value;
+                if (yearFrom || yearTo) {
+                    filterData.years = {};
+                    if (yearFrom) filterData.years.from = parseInt(yearFrom);
+                    if (yearTo) filterData.years.to = parseInt(yearTo);
+                }
+            }
+            
+            // 收集里程过滤条件
+            if (document.getElementById('mileageFilter').style.display !== 'none') {
+                const mileageFrom = document.getElementById('mileageFrom').value;
+                const mileageTo = document.getElementById('mileageTo').value;
+                if (mileageFrom || mileageTo) {
+                    filterData.mileage = {};
+                    if (mileageFrom) filterData.mileage.from = parseFloat(mileageFrom);
+                    if (mileageTo) filterData.mileage.to = parseFloat(mileageTo);
+                }
+            }
+            
+            console.log('应用的过滤条件:', filterData);
+        });
+        
+        // 表单提交事件
+        document.getElementById('analysisForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            formData.append('data_filter', JSON.stringify(filterData));
+            
+            // 显示加载状态
+            document.getElementById('analyzeBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> 分析中...';
+            document.getElementById('analyzeBtn').disabled = true;
+            
+            // 发送AJAX请求
+            fetch(window.location.href, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                // 恢复按钮状态
+                document.getElementById('analyzeBtn').innerHTML = '<i class="fas fa-chart-bar"></i> 开始分析';
+                document.getElementById('analyzeBtn').disabled = false;
+                
+                // 显示结果区域
+                document.querySelectorAll('.result-section').forEach(section => {
+                    section.style.display = 'block';
+                });
+                
+                // 更新分析摘要
+                document.getElementById('analysisSummary').textContent = data.summary;
+                
+                // 渲染图表和表格
+                renderChart(data.result_data, data.analysis_type);
+                renderStats(data.result_data, data.analysis_type);
+                renderTable(data.result_data, data.analysis_type);
+                
+                // 滚动到结果区域
+                document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth' });
+            })
+            .catch(error => {
+                console.error('分析请求失败:', error);
+                document.getElementById('analyzeBtn').innerHTML = '<i class="fas fa-chart-bar"></i> 开始分析';
+                document.getElementById('analyzeBtn').disabled = false;
+                alert('分析请求失败，请重试');
+            });
+        });
+    });
+    
+    // 添加选项到select元素
+    function addOption(selectElement, value, text) {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = text;
+        selectElement.appendChild(option);
+    }
+    
+    // 渲染图表
+    function renderChart(data, type) {
+        const ctx = document.getElementById('analysisChart').getContext('2d');
+        
+        // 清除旧图表
+        if (window.analysisChart) {
+            window.analysisChart.destroy();
+        }
+        
+        let labels = [];
+        let values = [];
+        let chartType = 'bar';
+        let chartTitle = '';
+        
+        // 根据分析类型设置图表数据
+        if (type === 'brand_price') {
+            labels = data.brands;
+            values = data.avg_prices;
+            chartTitle = '品牌平均价格(万元)';
+        } else if (type === 'region_price') {
+            labels = data.regions;
+            values = data.avg_prices;
+            chartTitle = '地区平均价格(万元)';
+        } else if (type === 'year_price') {
+            labels = data.years;
+            values = data.avg_prices;
+            chartType = 'line';
+            chartTitle = '年份平均价格(万元)';
+        } else if (type === 'mileage_price') {
+            labels = data.mileage_ranges;
+            values = data.avg_prices;
+            chartType = 'line';
+            chartTitle = '里程与平均价格关系(万元)';
+        } else if (type === 'brand_popularity') {
+            labels = data.brands;
+            values = data.car_counts;
+            chartTitle = '品牌流行度(车辆数量)';
+        } else if (type === 'brand_price_range') {
+            labels = data.brands;
+            values = data.price_ranges;
+            chartTitle = '品牌价格区间(万元)';
+        } else if (type === 'brand_region_distribution') {
+            labels = data.regions;
+            values = data.brand_counts;
+            chartTitle = '品牌地区分布';
+        } else if (type === 'region_car_count') {
+            labels = data.regions;
+            values = data.car_counts;
+            chartTitle = '地区车辆数量';
+        } else if (type === 'region_price_level') {
+            labels = data.regions;
+            values = data.avg_prices;
+            chartTitle = '地区价格水平(万元)';
+        } else if (type === 'region_brand_preference') {
+            labels = data.regions;
+            values = data.top_brands;
+            chartTitle = '地区品牌偏好';
+        } else if (type === 'fuel_type_analysis') {
+            labels = data.fuel_types;
+            values = data.car_counts;
+            chartTitle = '燃料类型分布';
+        } else if (type === 'transmission_analysis') {
+            labels = data.transmission_types;
+            values = data.car_counts;
+            chartTitle = '变速箱类型分布';
+        } else if (type === 'color_preference') {
+            labels = data.colors;
+            values = data.car_counts;
+            chartTitle = '车身颜色偏好';
+        } else if (type === 'engine_type_analysis') {
+            labels = data.engine_types;
+            values = data.car_counts;
+            chartTitle = '发动机类型分布';
+        } else if (type === 'mileage_distribution') {
+            labels = data.mileage_ranges;
+            values = data.car_counts;
+            chartTitle = '里程分布';
+        }
+        
+        // 更新图表标题
+        document.getElementById('chartTitle').textContent = chartTitle;
+        
+        // 创建图表配置
+        const chartConfig = {
+            type: chartType,
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: chartTitle,
+                    data: values,
+                    backgroundColor: 'rgba(78, 115, 223, 0.5)',
+                    borderColor: 'rgba(78, 115, 223, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: chartTitle.includes('价格') ? '价格(万元)' : '数量'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: type.includes('brand') ? '品牌' : 
+                                  type.includes('region') ? '地区' : 
+                                  type.includes('year') ? '年份' : 
+                                  type.includes('mileage') ? '里程范围' : 
+                                  type.includes('fuel') ? '燃料类型' : 
+                                  type.includes('transmission') ? '变速箱类型' : 
+                                  type.includes('color') ? '颜色' : 
+                                  type.includes('engine') ? '发动机类型' : '属性'
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.dataset.label || '';
+                                if (label) {
+                                    return `${label}: ${context.parsed.y}`;
+                                }
+                                return context.parsed.y;
+                            }
+                        }
+                    }
+                }
+            }
+        };
+        
+        // 创建图表
+        window.analysisChart = new Chart(ctx, chartConfig);
+    }
+    
+    // 渲染统计数据
+    function renderStats(data, type) {
+        const statsContainer = document.getElementById('analysisStats');
+        let statsHTML = '';
+        
+        // 根据分析类型渲染不同的统计数据
+        if (type === 'brand_price') {
+            if (data.highest_brand && data.lowest_brand) {
+                statsHTML = `
+                    <div class="mb-3">
+                        <h6>最高价格品牌</h6>
+                        <p class="h4">${data.highest_brand} <span class="text-success">${data.highest_price.toFixed(2)}万元</span></p>
+                    </div>
+                    <div class="mb-3">
+                        <h6>最低价格品牌</h6>
+                        <p class="h4">${data.lowest_brand} <span class="text-danger">${data.lowest_price.toFixed(2)}万元</span></p>
+                    </div>
+                    <div class="mb-3">
+                        <h6>品牌价格差异</h6>
+                        <p class="h4"><span class="text-primary">${data.price_difference.toFixed(2)}万元</span></p>
+                    </div>
+                `;
+            } else {
+                statsHTML = '<div class="alert alert-info">没有足够的数据生成统计信息</div>';
+            }
+        } else if (type === 'region_price') {
+            if (data.highest_region && data.lowest_region) {
+                statsHTML = `
+                    <div class="mb-3">
+                        <h6>最高价格地区</h6>
+                        <p class="h4">${data.highest_region} <span class="text-success">${data.highest_price.toFixed(2)}万元</span></p>
+                    </div>
+                    <div class="mb-3">
+                        <h6>最低价格地区</h6>
+                        <p class="h4">${data.lowest_region} <span class="text-danger">${data.lowest_price.toFixed(2)}万元</span></p>
+                    </div>
+                    <div class="mb-3">
+                        <h6>地区价格差异</h6>
+                        <p class="h4"><span class="text-primary">${data.price_difference.toFixed(2)}万元</span></p>
+                    </div>
+                `;
+            } else {
+                statsHTML = '<div class="alert alert-info">没有足够的数据生成统计信息</div>';
+            }
+        } else if (type === 'year_price') {
+            if (data.newest_year && data.oldest_year) {
+                statsHTML = `
+                    <div class="mb-3">
+                        <h6>最新年份价格</h6>
+                        <p class="h4">${data.newest_year}年 <span class="text-success">${data.newest_price.toFixed(2)}万元</span></p>
+                    </div>
+                    <div class="mb-3">
+                        <h6>最旧年份价格</h6>
+                        <p class="h4">${data.oldest_year}年 <span class="text-danger">${data.oldest_price.toFixed(2)}万元</span></p>
+                    </div>
+                    <div class="mb-3">
+                        <h6>年均贬值率</h6>
+                        <p class="h4"><span class="text-primary">${data.depreciation_rate.toFixed(2)}%</span></p>
+                    </div>
+                `;
+            } else {
+                statsHTML = '<div class="alert alert-info">没有足够的数据生成统计信息</div>';
+            }
+        } else if (type === 'mileage_price') {
+            if (data.lowest_mileage_range && data.highest_mileage_range) {
+                statsHTML = `
+                    <div class="mb-3">
+                        <h6>最低里程价格</h6>
+                        <p class="h4">${data.lowest_mileage_range} <span class="text-success">${data.highest_price.toFixed(2)}万元</span></p>
+                    </div>
+                    <div class="mb-3">
+                        <h6>最高里程价格</h6>
+                        <p class="h4">${data.highest_mileage_range} <span class="text-danger">${data.lowest_price.toFixed(2)}万元</span></p>
+                    </div>
+                    <div class="mb-3">
+                        <h6>每万公里贬值</h6>
+                        <p class="h4"><span class="text-primary">${data.depreciation_per_10k.toFixed(2)}万元</span></p>
+                    </div>
+                `;
+            } else {
+                statsHTML = '<div class="alert alert-info">没有足够的数据生成统计信息</div>';
+            }
+        } else {
+            // 其他分析类型的统计数据
+            statsHTML = `
+                <div class="mb-3">
+                    <h6>数据项数量</h6>
+                    <p class="h4">${labels ? labels.length : 0}</p>
+                </div>
+                <div class="mb-3">
+                    <h6>总计数据量</h6>
+                    <p class="h4">${values ? values.reduce((a, b) => a + b, 0) : 0}</p>
+                </div>
+            `;
+        }
+        
+        statsContainer.innerHTML = statsHTML;
+    }
+    
+    // 渲染表格数据
+    function renderTable(data, type) {
+        const tableHead = document.getElementById('tableHead');
+        const tableBody = document.getElementById('tableBody');
+        
+        let headHTML = '<tr>';
+        let bodyHTML = '';
+        
+        // 根据分析类型渲染不同的表格数据
+        if (type === 'brand_price') {
+            headHTML += '<th>品牌</th><th>平均价格(万元)</th><th>车辆数量</th><th>最高价格(万元)</th><th>最低价格(万元)</th>';
+            
+            if (data.brands && data.brands.length > 0) {
+                for (let i = 0; i < data.brands.length; i++) {
+                    bodyHTML += `<tr>
+                        <td>${data.brands[i]}</td>
+                        <td>${data.avg_prices[i].toFixed(2)}</td>
+                        <td>${data.car_counts[i]}</td>
+                        <td>${data.max_prices[i].toFixed(2)}</td>
+                        <td>${data.min_prices[i].toFixed(2)}</td>
+                    </tr>`;
+                }
+            }
+        } else if (type === 'region_price') {
+            headHTML += '<th>地区</th><th>平均价格(万元)</th><th>车辆数量</th><th>最高价格(万元)</th><th>最低价格(万元)</th>';
+            
+            if (data.regions && data.regions.length > 0) {
+                for (let i = 0; i < data.regions.length; i++) {
+                    bodyHTML += `<tr>
+                        <td>${data.regions[i]}</td>
+                        <td>${data.avg_prices[i].toFixed(2)}</td>
+                        <td>${data.car_counts[i]}</td>
+                        <td>${data.max_prices[i].toFixed(2)}</td>
+                        <td>${data.min_prices[i].toFixed(2)}</td>
+                    </tr>`;
+                }
+            }
+        } else if (type === 'year_price') {
+            headHTML += '<th>年份</th><th>平均价格(万元)</th><th>车辆数量</th><th>最高价格(万元)</th><th>最低价格(万元)</th>';
+            
+            if (data.years && data.years.length > 0) {
+                for (let i = 0; i < data.years.length; i++) {
+                    bodyHTML += `<tr>
+                        <td>${data.years[i]}</td>
+                        <td>${data.avg_prices[i].toFixed(2)}</td>
+                        <td>${data.car_counts[i]}</td>
+                        <td>${data.max_prices[i].toFixed(2)}</td>
+                        <td>${data.min_prices[i].toFixed(2)}</td>
+                    </tr>`;
+                }
+            }
+        } else if (type === 'mileage_price') {
+            headHTML += '<th>里程范围</th><th>平均价格(万元)</th><th>车辆数量</th><th>最高价格(万元)</th><th>最低价格(万元)</th>';
+            
+            if (data.mileage_ranges && data.mileage_ranges.length > 0) {
+                for (let i = 0; i < data.mileage_ranges.length; i++) {
+                    bodyHTML += `<tr>
+                        <td>${data.mileage_ranges[i]}</td>
+                        <td>${data.avg_prices[i].toFixed(2)}</td>
+                        <td>${data.car_counts[i]}</td>
+                        <td>${data.max_prices[i].toFixed(2)}</td>
+                        <td>${data.min_prices[i].toFixed(2)}</td>
+                    </tr>`;
+                }
+            }
+        } else {
+            // 其他分析类型的表格数据
+            // 根据实际数据结构动态生成表格
+            if (data) {
+                const keys = Object.keys(data);
+                if (keys.length > 0 && Array.isArray(data[keys[0]])) {
+                    // 假设第一个数组键是标签
+                    const labelKey = keys[0];
+                    const labels = data[labelKey];
+                    
+                    // 添加表头
+                    headHTML += `<th>${labelKey}</th>`;
+                    for (const key of keys.filter(k => k !== labelKey)) {
+                        headHTML += `<th>${key}</th>`;
+                    }
+                    
+                    // 添加表格内容
+                    if (labels && labels.length > 0) {
+                        for (let i = 0; i < labels.length; i++) {
+                            bodyHTML += '<tr>';
+                            bodyHTML += `<td>${labels[i]}</td>`;
+                            
+                            for (const key of keys.filter(k => k !== labelKey)) {
+                                const value = data[key][i];
+                                bodyHTML += `<td>${typeof value === 'number' ? value.toFixed(2) : value}</td>`;
+                            }
+                            
+                            bodyHTML += '</tr>';
+                        }
+                    }
+                }
+            }
+        }
+        
+        headHTML += '</tr>';
+        tableHead.innerHTML = headHTML;
+        tableBody.innerHTML = bodyHTML || '<tr><td colspan="5" class="text-center">没有数据</td></tr>';
+    }
+</script>
+{% endblock %}

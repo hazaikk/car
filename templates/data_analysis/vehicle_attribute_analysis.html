@@ -1,0 +1,781 @@
+{% extends 'base.html' %}
+
+{% block title %}车辆属性分析 - 汽车之家数据可视化与智能分析平台{% endblock %}
+
+{% block extra_css %}
+<style>
+    .analysis-type-btn {
+        margin-bottom: 10px;
+    }
+    .analysis-type-btn.active {
+        background-color: #4e73df;
+        color: white;
+    }
+    .chart-container {
+        position: relative;
+        height: 400px;
+        margin-bottom: 20px;
+    }
+    .summary-card {
+        background-color: #f8f9fc;
+        border-left: 4px solid #4e73df;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    .attribute-card {
+        transition: all 0.3s ease;
+    }
+    .attribute-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #4e73df;
+    }
+    .stat-label {
+        font-size: 0.9rem;
+        color: #858796;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">车辆属性分析</h5>
+                <a href="{% url 'car_analysis:data_analysis:vehicle_attribute_analysis' %}?type={{ analysis_type }}&refresh=true" class="btn btn-light btn-sm">
+                    <i class="fas fa-sync-alt"></i> 刷新分析
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="btn-group d-flex flex-wrap" role="group">
+                            <a href="{% url 'car_analysis:data_analysis:vehicle_attribute_analysis' %}?type=vehicle_age" class="btn btn-outline-primary analysis-type-btn {% if analysis_type == 'vehicle_age' %}active{% endif %}">
+                                <i class="fas fa-calendar-alt"></i> 车龄分析
+                            </a>
+                            <a href="{% url 'car_analysis:data_analysis:vehicle_attribute_analysis' %}?type=mileage" class="btn btn-outline-primary analysis-type-btn {% if analysis_type == 'mileage' %}active{% endif %}">
+                                <i class="fas fa-tachometer-alt"></i> 里程分析
+                            </a>
+                            <a href="{% url 'car_analysis:data_analysis:vehicle_attribute_analysis' %}?type=transmission" class="btn btn-outline-primary analysis-type-btn {% if analysis_type == 'transmission' %}active{% endif %}">
+                                <i class="fas fa-cogs"></i> 变速箱类型分析
+                            </a>
+                            <a href="{% url 'car_analysis:data_analysis:vehicle_attribute_analysis' %}?type=fuel_type" class="btn btn-outline-primary analysis-type-btn {% if analysis_type == 'fuel_type' %}active{% endif %}">
+                                <i class="fas fa-gas-pump"></i> 燃料类型分析
+                            </a>
+                            <a href="{% url 'car_analysis:data_analysis:vehicle_attribute_analysis' %}?type=color" class="btn btn-outline-primary analysis-type-btn {% if analysis_type == 'color' %}active{% endif %}">
+                                <i class="fas fa-palette"></i> 车身颜色分析
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if analysis %}
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="summary-card">
+                            <h5>分析摘要</h5>
+                            <p>{{ analysis.summary }}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card border-left-primary shadow h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">总车辆数</div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="totalCars">{{ total_cars }}</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-car fa-2x text-gray-300"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="card border-left-success shadow h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1" id="statLabel1">平均值</div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="statValue1">-</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-chart-line fa-2x text-gray-300"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="card border-left-info shadow h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1" id="statLabel2">最小值</div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="statValue2">-</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-arrow-down fa-2x text-gray-300"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="card border-left-warning shadow h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1" id="statLabel3">最大值</div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="statValue3">-</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-arrow-up fa-2x text-gray-300"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-lg-8">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold text-primary">{{ analysis.get_analysis_type_display }} 图表</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="attributeAnalysisChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-4">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold text-primary" id="rankingTitle">排名</h6>
+                            </div>
+                            <div class="card-body">
+                                <div id="attributeRanking">
+                                    <!-- 排名将通过JavaScript动态填充 -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if analysis_type == 'vehicle_age' or analysis_type == 'mileage' %}
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold text-primary">价格关系分析</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="priceRelationChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if analysis_type == 'transmission' or analysis_type == 'fuel_type' or analysis_type == 'color' %}
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold text-primary">分布情况</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row" id="attributeCards">
+                                    <!-- 属性卡片将通过JavaScript动态填充 -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold text-primary">详细数据</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                                        <thead id="tableHead">
+                                            <!-- 表头将通过JavaScript动态填充 -->
+                                        </thead>
+                                        <tbody id="tableBody">
+                                            <!-- 表格数据将通过JavaScript动态填充 -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i> 暂无分析数据，请点击"刷新分析"按钮生成分析结果。
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        {% if analysis and analysis.result_data %}
+            const analysisData = {{ analysis.result_data|safe }};
+            const analysisType = "{{ analysis_type }}";
+            
+            // 更新统计卡片
+            updateStatCards(analysisData, analysisType);
+            
+            // 渲染主图表
+            renderMainChart(analysisData, analysisType);
+            
+            // 渲染排名
+            renderAttributeRanking(analysisData, analysisType);
+            
+            // 渲染表格数据
+            renderTable(analysisData, analysisType);
+            
+            // 根据分析类型渲染特定内容
+            if (analysisType === 'vehicle_age' || analysisType === 'mileage') {
+                renderPriceRelationChart(analysisData, analysisType);
+            } else if (analysisType === 'transmission' || analysisType === 'fuel_type' || analysisType === 'color') {
+                renderAttributeCards(analysisData, analysisType);
+            }
+        {% endif %}
+    });
+    
+    function updateStatCards(data, type) {
+        if (type === 'vehicle_age') {
+            document.getElementById('statLabel1').textContent = '平均车龄';
+            document.getElementById('statValue1').textContent = data.avg_age.toFixed(1) + '年';
+            document.getElementById('statLabel2').textContent = '最小车龄';
+            document.getElementById('statValue2').textContent = data.min_age + '年';
+            document.getElementById('statLabel3').textContent = '最大车龄';
+            document.getElementById('statValue3').textContent = data.max_age + '年';
+        } else if (type === 'mileage') {
+            document.getElementById('statLabel1').textContent = '平均里程';
+            document.getElementById('statValue1').textContent = data.avg_mileage.toFixed(1) + '万公里';
+            document.getElementById('statLabel2').textContent = '最小里程';
+            document.getElementById('statValue2').textContent = data.min_mileage + '万公里';
+            document.getElementById('statLabel3').textContent = '最大里程';
+            document.getElementById('statValue3').textContent = data.max_mileage + '万公里';
+        } else if (type === 'transmission') {
+            document.getElementById('statLabel1').textContent = '主流变速箱';
+            document.getElementById('statValue1').textContent = data.most_common_transmission;
+            document.getElementById('statLabel2').textContent = '变速箱类型数';
+            document.getElementById('statValue2').textContent = data.transmission_types.length;
+            document.getElementById('statLabel3').textContent = '自动变速箱占比';
+            document.getElementById('statValue3').textContent = data.auto_transmission_percentage.toFixed(1) + '%';
+        } else if (type === 'fuel_type') {
+            document.getElementById('statLabel1').textContent = '主流燃料类型';
+            document.getElementById('statValue1').textContent = data.most_common_fuel_type;
+            document.getElementById('statLabel2').textContent = '燃料类型数';
+            document.getElementById('statValue2').textContent = data.fuel_types.length;
+            document.getElementById('statLabel3').textContent = '新能源占比';
+            document.getElementById('statValue3').textContent = data.new_energy_percentage.toFixed(1) + '%';
+        } else if (type === 'color') {
+            document.getElementById('statLabel1').textContent = '最受欢迎颜色';
+            document.getElementById('statValue1').textContent = data.most_common_color;
+            document.getElementById('statLabel2').textContent = '颜色种类数';
+            document.getElementById('statValue2').textContent = data.colors.length;
+            document.getElementById('statLabel3').textContent = '白色车占比';
+            document.getElementById('statValue3').textContent = data.white_percentage.toFixed(1) + '%';
+        }
+    }
+    
+    function renderMainChart(data, type) {
+        const ctx = document.getElementById('attributeAnalysisChart').getContext('2d');
+        
+        let labels = [];
+        let values = [];
+        let chartType = 'bar';
+        let chartTitle = '';
+        let backgroundColor = [];
+        
+        if (type === 'vehicle_age') {
+            labels = data.age_ranges;
+            values = data.age_counts;
+            chartTitle = '车龄分布';
+            chartType = 'bar';
+            backgroundColor = Array(labels.length).fill('rgba(78, 115, 223, 0.5)');
+        } else if (type === 'mileage') {
+            labels = data.mileage_ranges;
+            values = data.mileage_counts;
+            chartTitle = '里程分布';
+            chartType = 'bar';
+            backgroundColor = Array(labels.length).fill('rgba(78, 115, 223, 0.5)');
+        } else if (type === 'transmission') {
+            labels = data.transmission_types;
+            values = data.transmission_counts;
+            chartTitle = '变速箱类型分布';
+            chartType = 'pie';
+            backgroundColor = generateColors(labels.length);
+        } else if (type === 'fuel_type') {
+            labels = data.fuel_types;
+            values = data.fuel_type_counts;
+            chartTitle = '燃料类型分布';
+            chartType = 'pie';
+            backgroundColor = generateColors(labels.length);
+        } else if (type === 'color') {
+            labels = data.colors;
+            values = data.color_counts;
+            chartTitle = '车身颜色分布';
+            chartType = 'pie';
+            backgroundColor = data.color_hex_codes || generateColors(labels.length);
+        }
+        
+        let chartConfig = {};
+        
+        if (chartType === 'bar') {
+            chartConfig = {
+                type: chartType,
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: chartTitle,
+                        data: values,
+                        backgroundColor: 'rgba(78, 115, 223, 0.5)',
+                        borderColor: 'rgba(78, 115, 223, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: '车辆数量'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: type === 'vehicle_age' ? '车龄(年)' : '里程(万公里)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: chartTitle
+                        }
+                    }
+                }
+            };
+        } else if (chartType === 'pie') {
+            chartConfig = {
+                type: chartType,
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: backgroundColor,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: chartTitle
+                        },
+                        legend: {
+                            position: 'right'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.raw;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = Math.round((value / total) * 100);
+                                    return `${label}: ${value} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+        }
+        
+        new Chart(ctx, chartConfig);
+    }
+    
+    function renderAttributeRanking(data, type) {
+        const rankingContainer = document.getElementById('attributeRanking');
+        const rankingTitle = document.getElementById('rankingTitle');
+        let rankingHTML = '<ol class="list-group list-group-numbered">';
+        
+        if (type === 'vehicle_age') {
+            rankingTitle.textContent = '车龄段排名';
+            const ageData = data.age_ranges.map((range, i) => ({ range, count: data.age_counts[i] }));
+            ageData.sort((a, b) => b.count - a.count);
+            
+            for (let i = 0; i < Math.min(ageData.length, 10); i++) {
+                rankingHTML += `
+                    <li class="list-group-item d-flex justify-content-between align-items-start">
+                        <div class="ms-2 me-auto">
+                            <div class="fw-bold">${ageData[i].range}</div>
+                        </div>
+                        <span class="badge bg-primary rounded-pill">${ageData[i].count}辆</span>
+                    </li>
+                `;
+            }
+        } else if (type === 'mileage') {
+            rankingTitle.textContent = '里程段排名';
+            const mileageData = data.mileage_ranges.map((range, i) => ({ range, count: data.mileage_counts[i] }));
+            mileageData.sort((a, b) => b.count - a.count);
+            
+            for (let i = 0; i < Math.min(mileageData.length, 10); i++) {
+                rankingHTML += `
+                    <li class="list-group-item d-flex justify-content-between align-items-start">
+                        <div class="ms-2 me-auto">
+                            <div class="fw-bold">${mileageData[i].range}</div>
+                        </div>
+                        <span class="badge bg-primary rounded-pill">${mileageData[i].count}辆</span>
+                    </li>
+                `;
+            }
+        } else if (type === 'transmission') {
+            rankingTitle.textContent = '变速箱类型排名';
+            const transmissionData = data.transmission_types.map((type, i) => ({ type, count: data.transmission_counts[i] }));
+            transmissionData.sort((a, b) => b.count - a.count);
+            
+            for (let i = 0; i < Math.min(transmissionData.length, 10); i++) {
+                const percentage = (transmissionData[i].count / data.total_cars * 100).toFixed(1);
+                rankingHTML += `
+                    <li class="list-group-item d-flex justify-content-between align-items-start">
+                        <div class="ms-2 me-auto">
+                            <div class="fw-bold">${transmissionData[i].type}</div>
+                        </div>
+                        <span class="badge bg-primary rounded-pill">${transmissionData[i].count}辆 (${percentage}%)</span>
+                    </li>
+                `;
+            }
+        } else if (type === 'fuel_type') {
+            rankingTitle.textContent = '燃料类型排名';
+            const fuelData = data.fuel_types.map((type, i) => ({ type, count: data.fuel_type_counts[i] }));
+            fuelData.sort((a, b) => b.count - a.count);
+            
+            for (let i = 0; i < Math.min(fuelData.length, 10); i++) {
+                const percentage = (fuelData[i].count / data.total_cars * 100).toFixed(1);
+                rankingHTML += `
+                    <li class="list-group-item d-flex justify-content-between align-items-start">
+                        <div class="ms-2 me-auto">
+                            <div class="fw-bold">${fuelData[i].type}</div>
+                        </div>
+                        <span class="badge bg-primary rounded-pill">${fuelData[i].count}辆 (${percentage}%)</span>
+                    </li>
+                `;
+            }
+        } else if (type === 'color') {
+            rankingTitle.textContent = '车身颜色排名';
+            const colorData = data.colors.map((color, i) => ({ color, count: data.color_counts[i] }));
+            colorData.sort((a, b) => b.count - a.count);
+            
+            for (let i = 0; i < Math.min(colorData.length, 10); i++) {
+                const percentage = (colorData[i].count / data.total_cars * 100).toFixed(1);
+                const bgColor = data.color_hex_codes ? data.color_hex_codes[data.colors.indexOf(colorData[i].color)] : '#4e73df';
+                rankingHTML += `
+                    <li class="list-group-item d-flex justify-content-between align-items-start">
+                        <div class="ms-2 me-auto">
+                            <div class="fw-bold">
+                                <span class="color-swatch" style="display: inline-block; width: 15px; height: 15px; background-color: ${bgColor}; margin-right: 5px;"></span>
+                                ${colorData[i].color}
+                            </div>
+                        </div>
+                        <span class="badge bg-primary rounded-pill">${colorData[i].count}辆 (${percentage}%)</span>
+                    </li>
+                `;
+            }
+        }
+        
+        rankingHTML += '</ol>';
+        rankingContainer.innerHTML = rankingHTML;
+    }
+    
+    function renderPriceRelationChart(data, type) {
+        const ctx = document.getElementById('priceRelationChart').getContext('2d');
+        
+        let labels = [];
+        let values = [];
+        let chartTitle = '';
+        
+        if (type === 'vehicle_age') {
+            labels = data.age_ranges;
+            values = data.avg_prices_by_age;
+            chartTitle = '车龄与价格关系';
+        } else if (type === 'mileage') {
+            labels = data.mileage_ranges;
+            values = data.avg_prices_by_mileage;
+            chartTitle = '里程与价格关系';
+        }
+        
+        const chartConfig = {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: '平均价格(万元)',
+                    data: values,
+                    backgroundColor: 'rgba(78, 115, 223, 0.05)',
+                    borderColor: 'rgba(78, 115, 223, 1)',
+                    borderWidth: 2,
+                    pointBackgroundColor: 'rgba(78, 115, 223, 1)',
+                    pointRadius: 3,
+                    fill: true,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: '平均价格(万元)'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: type === 'vehicle_age' ? '车龄(年)' : '里程(万公里)'
+                        }
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: chartTitle
+                    }
+                }
+            }
+        };
+        
+        new Chart(ctx, chartConfig);
+    }
+    
+    function renderAttributeCards(data, type) {
+        const cardsContainer = document.getElementById('attributeCards');
+        let cardsHTML = '';
+        
+        if (type === 'transmission') {
+            for (let i = 0; i < Math.min(data.transmission_types.length, 8); i++) {
+                const percentage = (data.transmission_counts[i] / data.total_cars * 100).toFixed(1);
+                cardsHTML += `
+                    <div class="col-md-3 mb-4">
+                        <div class="card attribute-card h-100">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">${data.transmission_types[i]}</h5>
+                                <div class="my-3">
+                                    <span class="stat-value">${data.transmission_counts[i]}</span>
+                                    <span class="stat-label">辆</span>
+                                </div>
+                                <div class="progress mb-2">
+                                    <div class="progress-bar" role="progressbar" style="width: ${percentage}%" 
+                                        aria-valuenow="${percentage}" aria-valuemin="0" aria-valuemax="100">
+                                        ${percentage}%
+                                    </div>
+                                </div>
+                                <p class="card-text text-muted">平均价格: ${data.avg_prices_by_transmission[i].toFixed(2)}万元</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        } else if (type === 'fuel_type') {
+            for (let i = 0; i < Math.min(data.fuel_types.length, 8); i++) {
+                const percentage = (data.fuel_type_counts[i] / data.total_cars * 100).toFixed(1);
+                cardsHTML += `
+                    <div class="col-md-3 mb-4">
+                        <div class="card attribute-card h-100">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">${data.fuel_types[i]}</h5>
+                                <div class="my-3">
+                                    <span class="stat-value">${data.fuel_type_counts[i]}</span>
+                                    <span class="stat-label">辆</span>
+                                </div>
+                                <div class="progress mb-2">
+                                    <div class="progress-bar" role="progressbar" style="width: ${percentage}%" 
+                                        aria-valuenow="${percentage}" aria-valuemin="0" aria-valuemax="100">
+                                        ${percentage}%
+                                    </div>
+                                </div>
+                                <p class="card-text text-muted">平均价格: ${data.avg_prices_by_fuel_type[i].toFixed(2)}万元</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        } else if (type === 'color') {
+            for (let i = 0; i < Math.min(data.colors.length, 8); i++) {
+                const percentage = (data.color_counts[i] / data.total_cars * 100).toFixed(1);
+                const bgColor = data.color_hex_codes ? data.color_hex_codes[i] : '#4e73df';
+                cardsHTML += `
+                    <div class="col-md-3 mb-4">
+                        <div class="card attribute-card h-100">
+                            <div class="card-body text-center">
+                                <div class="color-sample mb-2" style="height: 20px; background-color: ${bgColor}; border-radius: 4px;"></div>
+                                <h5 class="card-title">${data.colors[i]}</h5>
+                                <div class="my-3">
+                                    <span class="stat-value">${data.color_counts[i]}</span>
+                                    <span class="stat-label">辆</span>
+                                </div>
+                                <div class="progress mb-2">
+                                    <div class="progress-bar" role="progressbar" style="width: ${percentage}%" 
+                                        aria-valuenow="${percentage}" aria-valuemin="0" aria-valuemax="100">
+                                        ${percentage}%
+                                    </div>
+                                </div>
+                                <p class="card-text text-muted">平均价格: ${data.avg_prices_by_color[i].toFixed(2)}万元</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        cardsContainer.innerHTML = cardsHTML;
+    }
+    
+    function renderTable(data, type) {
+        const tableHead = document.getElementById('tableHead');
+        const tableBody = document.getElementById('tableBody');
+        
+        let headHTML = '<tr>';
+        let bodyHTML = '';
+        
+        if (type === 'vehicle_age') {
+            headHTML += '<th>车龄段</th><th>车辆数量</th><th>占比</th><th>平均价格(万元)</th>';
+            
+            for (let i = 0; i < data.age_ranges.length; i++) {
+                const percentage = (data.age_counts[i] / data.total_cars * 100).toFixed(2);
+                bodyHTML += `<tr>
+                    <td>${data.age_ranges[i]}</td>
+                    <td>${data.age_counts[i]}</td>
+                    <td>${percentage}%</td>
+                    <td>${data.avg_prices_by_age[i].toFixed(2)}</td>
+                </tr>`;
+            }
+        } else if (type === 'mileage') {
+            headHTML += '<th>里程段</th><th>车辆数量</th><th>占比</th><th>平均价格(万元)</th>';
+            
+            for (let i = 0; i < data.mileage_ranges.length; i++) {
+                const percentage = (data.mileage_counts[i] / data.total_cars * 100).toFixed(2);
+                bodyHTML += `<tr>
+                    <td>${data.mileage_ranges[i]}</td>
+                    <td>${data.mileage_counts[i]}</td>
+                    <td>${percentage}%</td>
+                    <td>${data.avg_prices_by_mileage[i].toFixed(2)}</td>
+                </tr>`;
+            }
+        } else if (type === 'transmission') {
+            headHTML += '<th>变速箱类型</th><th>车辆数量</th><th>占比</th><th>平均价格(万元)</th>';
+            
+            for (let i = 0; i < data.transmission_types.length; i++) {
+                const percentage = (data.transmission_counts[i] / data.total_cars * 100).toFixed(2);
+                bodyHTML += `<tr>
+                    <td>${data.transmission_types[i]}</td>
+                    <td>${data.transmission_counts[i]}</td>
+                    <td>${percentage}%</td>
+                    <td>${data.avg_prices_by_transmission[i].toFixed(2)}</td>
+                </tr>`;
+            }
+        } else if (type === 'fuel_type') {
+            headHTML += '<th>燃料类型</th><th>车辆数量</th><th>占比</th><th>平均价格(万元)</th>';
+            
+            for (let i = 0; i < data.fuel_types.length; i++) {
+                const percentage = (data.fuel_type_counts[i] / data.total_cars * 100).toFixed(2);
+                bodyHTML += `<tr>
+                    <td>${data.fuel_types[i]}</td>
+                    <td>${data.fuel_type_counts[i]}</td>
+                    <td>${percentage}%</td>
+                    <td>${data.avg_prices_by_fuel_type[i].toFixed(2)}</td>
+                </tr>`;
+            }
+        } else if (type === 'color') {
+            headHTML += '<th>车身颜色</th><th>车辆数量</th><th>占比</th><th>平均价格(万元)</th>';
+            
+            for (let i = 0; i < data.colors.length; i++) {
+                const percentage = (data.color_counts[i] / data.total_cars * 100).toFixed(2);
+                const bgColor = data.color_hex_codes ? data.color_hex_codes[i] : '#4e73df';
+                bodyHTML += `<tr>
+                    <td>
+                        <span class="color-swatch" style="display: inline-block; width: 15px; height: 15px; background-color: ${bgColor}; margin-right: 5px;"></span>
+                        ${data.colors[i]}
+                    </td>
+                    <td>${data.color_counts[i]}</td>
+                    <td>${percentage}%</td>
+                    <td>${data.avg_prices_by_color[i].toFixed(2)}</td>
+                </tr>`;
+            }
+        }
+        
+        headHTML += '</tr>';
+        tableHead.innerHTML = headHTML;
+        tableBody.innerHTML = bodyHTML;
+    }
+    
+    function generateColors(count) {
+        const colors = [
+            'rgba(78, 115, 223, 0.8)',
+            'rgba(28, 200, 138, 0.8)',
+            'rgba(54, 185, 204, 0.8)',
+            'rgba(246, 194, 62, 0.8)',
+            'rgba(231, 74, 59, 0.8)',
+            'rgba(133, 135, 150, 0.8)',
+            'rgba(105, 0, 132, 0.8)',
+            'rgba(0, 128, 128, 0.8)',
+            'rgba(128, 0, 0, 0.8)',
+            'rgba(0, 128, 0, 0.8)'
+        ];
+        
+        // 如果需要的颜色数量超过预定义的颜色数量，则生成随机颜色
+        if (count > colors.length) {
+            for (let i = colors.length; i < count; i++) {
+                const r = Math.floor(Math.random() * 255);
+                const g = Math.floor(Math.random() * 255);
+                const b = Math.floor(Math.random() * 255);
+                colors.push(`rgba(${r}, ${g}, ${b}, 0.8)`);
+            }
+        }
+        
+        return colors.slice(0, count);
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,566 @@
+{% extends 'base.html' %}
+
+{% block title %}品牌分析 - 汽车之家数据可视化与智能分析平台{% endblock %}
+
+{% block extra_css %}
+<style>
+    .analysis-type-btn {
+        margin-bottom: 10px;
+    }
+    .analysis-type-btn.active {
+        background-color: #4e73df;
+        color: white;
+    }
+    .chart-container {
+        position: relative;
+        height: 400px;
+        margin-bottom: 20px;
+    }
+    .summary-card {
+        background-color: #f8f9fc;
+        border-left: 4px solid #4e73df;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    .brand-card {
+        transition: all 0.3s ease;
+    }
+    .brand-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">品牌分析</h5>
+                <a href="{% url 'car_analysis:data_analysis:brand_analysis' %}?type={{ analysis_type }}&refresh=true" class="btn btn-light btn-sm">
+                    <i class="fas fa-sync-alt"></i> 刷新分析
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="btn-group d-flex flex-wrap" role="group">
+                            <a href="{% url 'car_analysis:data_analysis:brand_analysis' %}?type=brand_popularity" class="btn btn-outline-primary analysis-type-btn {% if analysis_type == 'brand_popularity' %}active{% endif %}">
+                                <i class="fas fa-star"></i> 品牌流行度分析
+                            </a>
+                            <a href="{% url 'car_analysis:data_analysis:brand_analysis' %}?type=brand_price_range" class="btn btn-outline-primary analysis-type-btn {% if analysis_type == 'brand_price_range' %}active{% endif %}">
+                                <i class="fas fa-dollar-sign"></i> 品牌价格区间分析
+                            </a>
+                            <a href="{% url 'car_analysis:data_analysis:brand_analysis' %}?type=brand_region_distribution" class="btn btn-outline-primary analysis-type-btn {% if analysis_type == 'brand_region_distribution' %}active{% endif %}">
+                                <i class="fas fa-map-marked-alt"></i> 品牌地区分布分析
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if analysis %}
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="summary-card">
+                            <h5>分析摘要</h5>
+                            <p>{{ analysis.summary }}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-lg-8">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold text-primary">{{ analysis.get_analysis_type_display }} 图表</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="brandAnalysisChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-4">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold text-primary">品牌排名</h6>
+                            </div>
+                            <div class="card-body">
+                                <div id="brandRanking">
+                                    <!-- 品牌排名将通过JavaScript动态填充 -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if analysis_type == 'brand_popularity' %}
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold text-primary">热门品牌</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row" id="popularBrands">
+                                    <!-- 热门品牌卡片将通过JavaScript动态填充 -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if analysis_type == 'brand_price_range' %}
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold text-primary">品牌价格区间分布</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="priceRangeChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if analysis_type == 'brand_region_distribution' %}
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold text-primary">品牌地区分布热力图</h6>
+                            </div>
+                            <div class="card-body">
+                                <div id="regionHeatmap" style="height: 500px;">
+                                    <!-- 地区热力图将通过JavaScript动态填充 -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold text-primary">详细数据</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                                        <thead id="tableHead">
+                                            <!-- 表头将通过JavaScript动态填充 -->
+                                        </thead>
+                                        <tbody id="tableBody">
+                                            <!-- 表格数据将通过JavaScript动态填充 -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i> 暂无分析数据，请点击"刷新分析"按钮生成分析结果。
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        {% if analysis and analysis.result_data %}
+            const analysisData = {{ analysis.result_data|safe }};
+            const analysisType = "{{ analysis_type }}";
+            
+            // 渲染主图表
+            renderMainChart(analysisData, analysisType);
+            
+            // 渲染品牌排名
+            renderBrandRanking(analysisData, analysisType);
+            
+            // 渲染表格数据
+            renderTable(analysisData, analysisType);
+            
+            // 根据分析类型渲染特定内容
+            if (analysisType === 'brand_popularity') {
+                renderPopularBrands(analysisData);
+            } else if (analysisType === 'brand_price_range') {
+                renderPriceRangeChart(analysisData);
+            } else if (analysisType === 'brand_region_distribution') {
+                renderRegionHeatmap(analysisData);
+            }
+        {% endif %}
+    });
+    
+    function renderMainChart(data, type) {
+        const ctx = document.getElementById('brandAnalysisChart').getContext('2d');
+        
+        let labels = [];
+        let values = [];
+        let chartType = 'bar';
+        let chartTitle = '';
+        
+        if (type === 'brand_popularity') {
+            labels = data.brands;
+            values = data.car_counts;
+            chartTitle = '品牌车辆数量';
+        } else if (type === 'brand_price_range') {
+            labels = data.brands;
+            values = data.avg_prices;
+            chartTitle = '品牌平均价格(万元)';
+        } else if (type === 'brand_region_distribution') {
+            labels = data.top_brands;
+            values = data.region_counts;
+            chartType = 'radar';
+            chartTitle = '品牌地区分布';
+        }
+        
+        let chartConfig = {};
+        
+        if (chartType === 'radar') {
+            // 雷达图配置
+            const datasets = [];
+            for (let i = 0; i < data.top_brands.length; i++) {
+                const color = getRandomColor();
+                datasets.push({
+                    label: data.top_brands[i],
+                    data: data.region_data[i],
+                    backgroundColor: color.replace(')', ', 0.2)').replace('rgb', 'rgba'),
+                    borderColor: color,
+                    pointBackgroundColor: color,
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: color
+                });
+            }
+            
+            chartConfig = {
+                type: 'radar',
+                data: {
+                    labels: data.regions,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    elements: {
+                        line: {
+                            borderWidth: 2
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: '品牌地区分布雷达图'
+                        }
+                    }
+                }
+            };
+        } else {
+            // 柱状图配置
+            chartConfig = {
+                type: chartType,
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: chartTitle,
+                        data: values,
+                        backgroundColor: 'rgba(78, 115, 223, 0.5)',
+                        borderColor: 'rgba(78, 115, 223, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: type === 'brand_popularity' ? '车辆数量' : '价格(万元)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: '品牌'
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    if (type === 'brand_popularity') {
+                                        return `${context.dataset.label}: ${context.parsed.y}辆`;
+                                    } else {
+                                        return `${context.dataset.label}: ${context.parsed.y.toFixed(2)}万元`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+        }
+        
+        new Chart(ctx, chartConfig);
+    }
+    
+    function renderBrandRanking(data, type) {
+        const rankingContainer = document.getElementById('brandRanking');
+        let rankingHTML = '<ol class="list-group list-group-numbered">';
+        
+        if (type === 'brand_popularity') {
+            for (let i = 0; i < Math.min(data.brands.length, 10); i++) {
+                rankingHTML += `
+                    <li class="list-group-item d-flex justify-content-between align-items-start">
+                        <div class="ms-2 me-auto">
+                            <div class="fw-bold">${data.brands[i]}</div>
+                        </div>
+                        <span class="badge bg-primary rounded-pill">${data.car_counts[i]}辆</span>
+                    </li>
+                `;
+            }
+        } else if (type === 'brand_price_range') {
+            // 按价格排序
+            const brandPrices = data.brands.map((brand, i) => ({ brand, price: data.avg_prices[i] }));
+            brandPrices.sort((a, b) => b.price - a.price);
+            
+            for (let i = 0; i < Math.min(brandPrices.length, 10); i++) {
+                rankingHTML += `
+                    <li class="list-group-item d-flex justify-content-between align-items-start">
+                        <div class="ms-2 me-auto">
+                            <div class="fw-bold">${brandPrices[i].brand}</div>
+                        </div>
+                        <span class="badge bg-success rounded-pill">${brandPrices[i].price.toFixed(2)}万元</span>
+                    </li>
+                `;
+            }
+        } else if (type === 'brand_region_distribution') {
+            // 按地区覆盖率排序
+            const brandCoverage = data.top_brands.map((brand, i) => ({ 
+                brand, 
+                coverage: data.region_coverage[i] 
+            }));
+            brandCoverage.sort((a, b) => b.coverage - a.coverage);
+            
+            for (let i = 0; i < Math.min(brandCoverage.length, 10); i++) {
+                rankingHTML += `
+                    <li class="list-group-item d-flex justify-content-between align-items-start">
+                        <div class="ms-2 me-auto">
+                            <div class="fw-bold">${brandCoverage[i].brand}</div>
+                        </div>
+                        <span class="badge bg-info rounded-pill">${(brandCoverage[i].coverage * 100).toFixed(1)}%</span>
+                    </li>
+                `;
+            }
+        }
+        
+        rankingHTML += '</ol>';
+        rankingContainer.innerHTML = rankingHTML;
+    }
+    
+    function renderPopularBrands(data) {
+        const brandsContainer = document.getElementById('popularBrands');
+        let brandsHTML = '';
+        
+        for (let i = 0; i < Math.min(data.brands.length, 8); i++) {
+            const percentage = (data.car_counts[i] / data.total_cars * 100).toFixed(1);
+            brandsHTML += `
+                <div class="col-md-3 mb-4">
+                    <div class="card brand-card h-100">
+                        <div class="card-body text-center">
+                            <h5 class="card-title">${data.brands[i]}</h5>
+                            <div class="my-3">
+                                <span class="display-4">${data.car_counts[i]}</span>
+                                <span class="text-muted">辆</span>
+                            </div>
+                            <div class="progress mb-2">
+                                <div class="progress-bar" role="progressbar" style="width: ${percentage}%" 
+                                    aria-valuenow="${percentage}" aria-valuemin="0" aria-valuemax="100">
+                                    ${percentage}%
+                                </div>
+                            </div>
+                            <p class="card-text text-muted">平均价格: ${data.avg_prices[i].toFixed(2)}万元</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        brandsContainer.innerHTML = brandsHTML;
+    }
+    
+    function renderPriceRangeChart(data) {
+        const ctx = document.getElementById('priceRangeChart').getContext('2d');
+        
+        const chartData = {
+            labels: data.brands,
+            datasets: [
+                {
+                    label: '最低价格',
+                    data: data.min_prices,
+                    backgroundColor: 'rgba(28, 200, 138, 0.5)',
+                    borderColor: 'rgba(28, 200, 138, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: '平均价格',
+                    data: data.avg_prices,
+                    backgroundColor: 'rgba(78, 115, 223, 0.5)',
+                    borderColor: 'rgba(78, 115, 223, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: '最高价格',
+                    data: data.max_prices,
+                    backgroundColor: 'rgba(231, 74, 59, 0.5)',
+                    borderColor: 'rgba(231, 74, 59, 1)',
+                    borderWidth: 1
+                }
+            ]
+        };
+        
+        const chartConfig = {
+            type: 'bar',
+            data: chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: '价格(万元)'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: '品牌'
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.dataset.label}: ${context.parsed.y.toFixed(2)}万元`;
+                            }
+                        }
+                    }
+                }
+            }
+        };
+        
+        new Chart(ctx, chartConfig);
+    }
+    
+    function renderRegionHeatmap(data) {
+        // 注意：这里需要引入额外的库来实现热力图，如echarts
+        // 这里提供一个简单的表格代替
+        const heatmapContainer = document.getElementById('regionHeatmap');
+        let heatmapHTML = '<div class="table-responsive"><table class="table table-bordered table-sm">';
+        
+        // 表头 - 地区
+        heatmapHTML += '<thead><tr><th></th>';
+        for (let region of data.regions) {
+            heatmapHTML += `<th>${region}</th>`;
+        }
+        heatmapHTML += '</tr></thead><tbody>';
+        
+        // 表格内容 - 品牌和地区分布
+        for (let i = 0; i < data.top_brands.length; i++) {
+            heatmapHTML += `<tr><th>${data.top_brands[i]}</th>`;
+            for (let j = 0; j < data.regions.length; j++) {
+                const value = data.region_data[i][j];
+                const intensity = Math.min(255, Math.floor(value * 255 / data.max_count));
+                const bgColor = `rgba(78, 115, 223, ${value / data.max_count})`;
+                heatmapHTML += `<td style="background-color: ${bgColor}">${value}</td>`;
+            }
+            heatmapHTML += '</tr>';
+        }
+        
+        heatmapHTML += '</tbody></table></div>';
+        heatmapContainer.innerHTML = heatmapHTML;
+    }
+    
+    function renderTable(data, type) {
+        const tableHead = document.getElementById('tableHead');
+        const tableBody = document.getElementById('tableBody');
+        
+        let headHTML = '<tr>';
+        let bodyHTML = '';
+        
+        if (type === 'brand_popularity') {
+            headHTML += '<th>品牌</th><th>车辆数量</th><th>占比</th><th>平均价格(万元)</th>';
+            
+            for (let i = 0; i < data.brands.length; i++) {
+                const percentage = (data.car_counts[i] / data.total_cars * 100).toFixed(2);
+                bodyHTML += `<tr>
+                    <td>${data.brands[i]}</td>
+                    <td>${data.car_counts[i]}</td>
+                    <td>${percentage}%</td>
+                    <td>${data.avg_prices[i].toFixed(2)}</td>
+                </tr>`;
+            }
+        } else if (type === 'brand_price_range') {
+            headHTML += '<th>品牌</th><th>平均价格(万元)</th><th>最低价格(万元)</th><th>最高价格(万元)</th><th>价格区间(万元)</th>';
+            
+            for (let i = 0; i < data.brands.length; i++) {
+                const priceRange = data.max_prices[i] - data.min_prices[i];
+                bodyHTML += `<tr>
+                    <td>${data.brands[i]}</td>
+                    <td>${data.avg_prices[i].toFixed(2)}</td>
+                    <td>${data.min_prices[i].toFixed(2)}</td>
+                    <td>${data.max_prices[i].toFixed(2)}</td>
+                    <td>${priceRange.toFixed(2)}</td>
+                </tr>`;
+            }
+        } else if (type === 'brand_region_distribution') {
+            headHTML += '<th>品牌</th><th>覆盖地区数</th><th>地区覆盖率</th><th>主要地区</th>';
+            
+            for (let i = 0; i < data.top_brands.length; i++) {
+                bodyHTML += `<tr>
+                    <td>${data.top_brands[i]}</td>
+                    <td>${data.region_counts[i]}</td>
+                    <td>${(data.region_coverage[i] * 100).toFixed(2)}%</td>
+                    <td>${data.main_regions[i].join(', ')}</td>
+                </tr>`;
+            }
+        }
+        
+        headHTML += '</tr>';
+        tableHead.innerHTML = headHTML;
+        tableBody.innerHTML = bodyHTML;
+    }
+    
+    function getRandomColor() {
+        const r = Math.floor(Math.random() * 200) + 55;
+        const g = Math.floor(Math.random() * 200) + 55;
+        const b = Math.floor(Math.random() * 200) + 55;
+        return `rgb(${r}, ${g}, ${b})`;
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,352 @@
+{% extends 'base.html' %}
+
+{% block title %}价格分析 - 汽车之家数据可视化与智能分析平台{% endblock %}
+
+{% block extra_css %}
+<style>
+    .analysis-type-btn {
+        margin-bottom: 10px;
+    }
+    .analysis-type-btn.active {
+        background-color: #4e73df;
+        color: white;
+    }
+    .chart-container {
+        position: relative;
+        height: 400px;
+        margin-bottom: 20px;
+    }
+    .summary-card {
+        background-color: #f8f9fc;
+        border-left: 4px solid #4e73df;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">价格分析</h5>
+                <a href="{% url 'car_analysis:data_analysis:price_analysis' %}?type={{ analysis_type }}&refresh=true" class="btn btn-light btn-sm">
+                    <i class="fas fa-sync-alt"></i> 刷新分析
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="btn-group d-flex flex-wrap" role="group">
+                            <a href="{% url 'car_analysis:data_analysis:price_analysis' %}?type=brand_price" class="btn btn-outline-primary analysis-type-btn {% if analysis_type == 'brand_price' %}active{% endif %}">
+                                <i class="fas fa-car"></i> 品牌价格分析
+                            </a>
+                            <a href="{% url 'car_analysis:data_analysis:price_analysis' %}?type=region_price" class="btn btn-outline-primary analysis-type-btn {% if analysis_type == 'region_price' %}active{% endif %}">
+                                <i class="fas fa-map-marker-alt"></i> 地区价格分析
+                            </a>
+                            <a href="{% url 'car_analysis:data_analysis:price_analysis' %}?type=year_price" class="btn btn-outline-primary analysis-type-btn {% if analysis_type == 'year_price' %}active{% endif %}">
+                                <i class="fas fa-calendar-alt"></i> 年份价格分析
+                            </a>
+                            <a href="{% url 'car_analysis:data_analysis:price_analysis' %}?type=mileage_price" class="btn btn-outline-primary analysis-type-btn {% if analysis_type == 'mileage_price' %}active{% endif %}">
+                                <i class="fas fa-tachometer-alt"></i> 里程价格分析
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if analysis %}
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="summary-card">
+                            <h5>分析摘要</h5>
+                            <p>{{ analysis.summary }}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-lg-8">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold text-primary">{{ analysis.get_analysis_type_display }} 图表</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="priceAnalysisChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-4">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold text-primary">数据统计</h6>
+                            </div>
+                            <div class="card-body">
+                                <div id="priceStats">
+                                    <!-- 统计数据将通过JavaScript动态填充 -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold text-primary">详细数据</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                                        <thead id="tableHead">
+                                            <!-- 表头将通过JavaScript动态填充 -->
+                                        </thead>
+                                        <tbody id="tableBody">
+                                            <!-- 表格数据将通过JavaScript动态填充 -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i> 暂无分析数据，请点击"刷新分析"按钮生成分析结果。
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        {% if analysis and analysis.result_data %}
+            const analysisData = {{ analysis.result_data|safe }};
+            const analysisType = "{{ analysis_type }}";
+            
+            // 渲染图表
+            renderChart(analysisData, analysisType);
+            
+            // 渲染统计数据
+            renderStats(analysisData, analysisType);
+            
+            // 渲染表格数据
+            renderTable(analysisData, analysisType);
+        {% endif %}
+    });
+    
+    function renderChart(data, type) {
+        const ctx = document.getElementById('priceAnalysisChart').getContext('2d');
+        
+        let labels = [];
+        let values = [];
+        let chartType = 'bar';
+        let chartTitle = '';
+        
+        if (type === 'brand_price') {
+            labels = data.brands;
+            values = data.avg_prices;
+            chartTitle = '品牌平均价格(万元)';
+        } else if (type === 'region_price') {
+            labels = data.regions;
+            values = data.avg_prices;
+            chartTitle = '地区平均价格(万元)';
+        } else if (type === 'year_price') {
+            labels = data.years;
+            values = data.avg_prices;
+            chartType = 'line';
+            chartTitle = '年份平均价格(万元)';
+        } else if (type === 'mileage_price') {
+            labels = data.mileage_ranges;
+            values = data.avg_prices;
+            chartType = 'line';
+            chartTitle = '里程与平均价格关系(万元)';
+        }
+        
+        const chartConfig = {
+            type: chartType,
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: chartTitle,
+                    data: values,
+                    backgroundColor: 'rgba(78, 115, 223, 0.5)',
+                    borderColor: 'rgba(78, 115, 223, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: '价格(万元)'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: type === 'brand_price' ? '品牌' : 
+                                  type === 'region_price' ? '地区' : 
+                                  type === 'year_price' ? '年份' : '里程范围'
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.dataset.label}: ${context.parsed.y.toFixed(2)}万元`;
+                            }
+                        }
+                    }
+                }
+            }
+        };
+        
+        new Chart(ctx, chartConfig);
+    }
+    
+    function renderStats(data, type) {
+        const statsContainer = document.getElementById('priceStats');
+        let statsHTML = '';
+        
+        if (type === 'brand_price') {
+            statsHTML = `
+                <div class="mb-3">
+                    <h6>最高价格品牌</h6>
+                    <p class="h4">${data.highest_brand} <span class="text-success">${data.highest_price.toFixed(2)}万元</span></p>
+                </div>
+                <div class="mb-3">
+                    <h6>最低价格品牌</h6>
+                    <p class="h4">${data.lowest_brand} <span class="text-danger">${data.lowest_price.toFixed(2)}万元</span></p>
+                </div>
+                <div class="mb-3">
+                    <h6>品牌价格差异</h6>
+                    <p class="h4"><span class="text-primary">${data.price_difference.toFixed(2)}万元</span></p>
+                </div>
+            `;
+        } else if (type === 'region_price') {
+            statsHTML = `
+                <div class="mb-3">
+                    <h6>最高价格地区</h6>
+                    <p class="h4">${data.highest_region} <span class="text-success">${data.highest_price.toFixed(2)}万元</span></p>
+                </div>
+                <div class="mb-3">
+                    <h6>最低价格地区</h6>
+                    <p class="h4">${data.lowest_region} <span class="text-danger">${data.lowest_price.toFixed(2)}万元</span></p>
+                </div>
+                <div class="mb-3">
+                    <h6>地区价格差异</h6>
+                    <p class="h4"><span class="text-primary">${data.price_difference.toFixed(2)}万元</span></p>
+                </div>
+            `;
+        } else if (type === 'year_price') {
+            statsHTML = `
+                <div class="mb-3">
+                    <h6>最新年份价格</h6>
+                    <p class="h4">${data.newest_year}年 <span class="text-success">${data.newest_price.toFixed(2)}万元</span></p>
+                </div>
+                <div class="mb-3">
+                    <h6>最旧年份价格</h6>
+                    <p class="h4">${data.oldest_year}年 <span class="text-danger">${data.oldest_price.toFixed(2)}万元</span></p>
+                </div>
+                <div class="mb-3">
+                    <h6>年均贬值率</h6>
+                    <p class="h4"><span class="text-primary">${data.depreciation_rate.toFixed(2)}%</span></p>
+                </div>
+            `;
+        } else if (type === 'mileage_price') {
+            statsHTML = `
+                <div class="mb-3">
+                    <h6>最低里程价格</h6>
+                    <p class="h4">${data.lowest_mileage_range} <span class="text-success">${data.highest_price.toFixed(2)}万元</span></p>
+                </div>
+                <div class="mb-3">
+                    <h6>最高里程价格</h6>
+                    <p class="h4">${data.highest_mileage_range} <span class="text-danger">${data.lowest_price.toFixed(2)}万元</span></p>
+                </div>
+                <div class="mb-3">
+                    <h6>每万公里贬值</h6>
+                    <p class="h4"><span class="text-primary">${data.depreciation_per_10k.toFixed(2)}万元</span></p>
+                </div>
+            `;
+        }
+        
+        statsContainer.innerHTML = statsHTML;
+    }
+    
+    function renderTable(data, type) {
+        const tableHead = document.getElementById('tableHead');
+        const tableBody = document.getElementById('tableBody');
+        
+        let headHTML = '<tr>';
+        let bodyHTML = '';
+        
+        if (type === 'brand_price') {
+            headHTML += '<th>品牌</th><th>平均价格(万元)</th><th>车辆数量</th><th>最高价格(万元)</th><th>最低价格(万元)</th>';
+            
+            for (let i = 0; i < data.brands.length; i++) {
+                bodyHTML += `<tr>
+                    <td>${data.brands[i]}</td>
+                    <td>${data.avg_prices[i].toFixed(2)}</td>
+                    <td>${data.car_counts[i]}</td>
+                    <td>${data.max_prices[i].toFixed(2)}</td>
+                    <td>${data.min_prices[i].toFixed(2)}</td>
+                </tr>`;
+            }
+        } else if (type === 'region_price') {
+            headHTML += '<th>地区</th><th>平均价格(万元)</th><th>车辆数量</th><th>最高价格(万元)</th><th>最低价格(万元)</th>';
+            
+            for (let i = 0; i < data.regions.length; i++) {
+                bodyHTML += `<tr>
+                    <td>${data.regions[i]}</td>
+                    <td>${data.avg_prices[i].toFixed(2)}</td>
+                    <td>${data.car_counts[i]}</td>
+                    <td>${data.max_prices[i].toFixed(2)}</td>
+                    <td>${data.min_prices[i].toFixed(2)}</td>
+                </tr>`;
+            }
+        } else if (type === 'year_price') {
+            headHTML += '<th>年份</th><th>平均价格(万元)</th><th>车辆数量</th><th>最高价格(万元)</th><th>最低价格(万元)</th>';
+            
+            for (let i = 0; i < data.years.length; i++) {
+                bodyHTML += `<tr>
+                    <td>${data.years[i]}</td>
+                    <td>${data.avg_prices[i].toFixed(2)}</td>
+                    <td>${data.car_counts[i]}</td>
+                    <td>${data.max_prices[i].toFixed(2)}</td>
+                    <td>${data.min_prices[i].toFixed(2)}</td>
+                </tr>`;
+            }
+        } else if (type === 'mileage_price') {
+            headHTML += '<th>里程范围</th><th>平均价格(万元)</th><th>车辆数量</th><th>最高价格(万元)</th><th>最低价格(万元)</th>';
+            
+            for (let i = 0; i < data.mileage_ranges.length; i++) {
+                bodyHTML += `<tr>
+                    <td>${data.mileage_ranges[i]}</td>
+                    <td>${data.avg_prices[i].toFixed(2)}</td>
+                    <td>${data.car_counts[i]}</td>
+                    <td>${data.max_prices[i].toFixed(2)}</td>
+                    <td>${data.min_prices[i].toFixed(2)}</td>
+                </tr>`;
+            }
+        }
+        
+        headHTML += '</tr>';
+        tableHead.innerHTML = headHTML;
+        tableBody.innerHTML = bodyHTML;
+    }
+</script>
+{% endblock %}
