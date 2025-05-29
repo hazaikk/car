@@ -1,3 +1,12 @@
 net start mysql
 mysql -u root -p
 SHOW DATABASES;
+
+导入数据
+python manage.py import_used_cars "二手车数据.xlsx"
+
+启动
+python manage.py runserver
+
+创建管理员
+python manage.py createsuperuser --username root --email admin@example.com

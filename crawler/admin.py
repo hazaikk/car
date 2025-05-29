@@ -18,7 +18,7 @@ class CarModelAdmin(admin.ModelAdmin):
 
 @admin.register(UsedCar)
 class UsedCarAdmin(admin.ModelAdmin):
-    list_display = ('title', 'car_model', 'price', 'year', 'mileage', 'location')
-    list_filter = ('car_model__brand', 'year', 'location')
+    list_display = ('title', 'car_model', 'price', 'registration_date', 'mileage', 'location')
+    list_filter = ('car_model__brand', 'registration_date', 'location')
     search_fields = ('title', 'car_model__name', 'car_model__brand__name')
     date_hierarchy = 'created_at'
