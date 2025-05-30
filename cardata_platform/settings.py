@@ -53,6 +53,9 @@ INSTALLED_APPS = [
     "data_analysis",
     "api",
     "crawler",
+    "visualization",
+    "car_analysis",
+    "car_api",
 ]
 
 MIDDLEWARE = [
