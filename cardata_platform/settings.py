@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     "visualization",
     "car_analysis",
     "car_api",
+    "analysis_records", # 新增分析记录应用
 ]
 
 MIDDLEWARE = [

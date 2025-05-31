@@ -1,456 +1,627 @@
 {% extends "admin/base_site.html" %}
-{% load i18n static %}
+{% load static %}
 
 {% block extrastyle %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css">
-<style>
-    .analysis-container {
-        padding: 20px;
-    }
-    .filter-section {
-        background-color: #f9f9f9;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        padding: 15px;
-        margin-bottom: 20px;
-    }
-    .results-section {
-        background-color: #fff;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        padding: 15px;
-    }
-    .chart-container {
-        height: 400px;
-        margin-bottom: 20px;
-    }
-    .summary-stats {
-        display: flex;
-        justify-content: space-around;
-        margin-bottom: 20px;
-        flex-wrap: wrap;
-    }
-    .stat-box {
-        background-color: #f9f9f9;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        padding: 15px;
-        text-align: center;
-        min-width: 150px;
-        margin: 5px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .stat-box h4 {
-        margin-top: 0;
-        color: #447e9b;
-        font-size: 14px;
-    }
-    .stat-box p {
-        font-size: 20px;
-        font-weight: bold;
-        margin: 5px 0 0;
-        color: #333;
-    }
-    .loading {
-        display: none;
-        text-align: center;
-        padding: 20px;
-    }
-    .loading img {
-        width: 50px;
-    }
-</style>
-{% endblock %}
+    {{ block.super }}
+    <!-- 使用CDN引入jQuery和jQuery UI -->
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+    <script>
+        // 检查是否已存在jQuery，避免冲突
+        if (typeof jQuery === 'undefined') {
+            document.write('<script src="https://code.jquery.com/jquery-3.6.0.min.js"><\/script>');
+            // 在jQuery加载完成后加载jQuery UI
+            document.write('<script>window.addEventListener("load", function() { ' +
+                'var script = document.createElement("script"); ' +
+                'script.src = "https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"; ' +
+                'script.onload = function() { initDatepickers(); }; ' +
+                'document.head.appendChild(script); ' +
+                '});<\/script>');
+        } else {
+            console.log('jQuery已存在，版本:', jQuery.fn.jquery);
+            // 直接加载jQuery UI
+            document.write('<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js" onload="initDatepickers()"><\/script>');
+        }
 
-{% block extrahead %}
-<script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
-{% endblock %}
+        // 全局定义日期选择器初始化函数
+        function initDatepickers() {
+            try {
+                console.log('尝试初始化日期选择器...');
+                console.log('找到的日期选择器元素数量:', $('.datepicker').length);
+                console.log('date_from元素:', document.getElementById('date_from'));
+                console.log('date_to元素:', document.getElementById('date_to'));
+                
+                // 使用ID选择器确保找到正确的元素
+                $('#date_from, #date_to').datepicker({
+                    dateFormat: 'yy-mm-dd',
+                    changeMonth: true,
+                    changeYear: true,
+                    yearRange: '2000:2030',
+                    showButtonPanel: true
+                });
+                
+                console.log('日期选择器初始化成功');
 
-{% block breadcrumbs %}
-<div class="breadcrumbs">
-    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
-    &rsaquo; <a href="{% url 'admin:app_list' app_label='crawler' %}">Crawler</a>
-    &rsaquo; <a href="{% url 'admin:crawler_usedcar_changelist' %}">Used cars</a>
-    &rsaquo; {% trans 'Interactive Analysis' %}
-</div>
+                // 确保日期选择器是只读的，防止手动输入
+                $('#date_from, #date_to').attr('readonly', true);
+                
+                console.log('日期选择器初始化成功');
+            } catch (error) {
+                console.error('日期选择器初始化失败:', error);
+                alert('日期选择器初始化失败: ' + error.message);
+            }
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <style>
+        .analysis-container {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .filter-form {
+            width: 250px; /* 减小筛选区域宽度 */
+            max-height: 500px; /* 限制高度 */
+            overflow-y: auto; /* 添加垂直滚动条 */
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .filter-form h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 16px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+        .filter-form .form-group {
+            margin-bottom: 12px;
+        }
+        .filter-form label {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+        .filter-form select,
+        .filter-form input[type="text"],
+        .filter-form input[type="number"] {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            box-sizing: border-box;
+            font-size: 13px;
+        }
+        .filter-form .date-range-group input[type="text"] {
+            width: calc(50% - 5px);
+        }
+        .chart-container {
+            flex-grow: 1;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            min-height: 500px;
+        }
+        .export-buttons {
+            margin-top: 15px;
+            text-align: right;
+        }
+        .export-buttons button {
+            margin-right: 10px;
+            padding: 6px 12px;
+            background-color: #417690;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .export-buttons button:hover {
+            background-color: #2b5070;
+        }
+        #applyFilterBtn {
+            width: 100%;
+            padding: 8px;
+            background-color: #417690;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        #applyFilterBtn:hover {
+            background-color: #2b5070;
+        }
+        /* 日期选择器样式 */
+        .ui-datepicker {
+            font-size: 13px;
+        }
+        /* 品牌选择区域样式 */
+        #brandCheckboxes {
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 5px;
+            margin-top: 5px;
+            background-color: white;
+        }
+        /* 地区选择区域样式 */
+        #regions {
+            height: 120px;
+        }
+    </style>
 {% endblock %}
 
 {% block content %}
-<div class="analysis-container">
+<div id="content-main">
     <h1>{{ title }}</h1>
-    
-    <div class="filter-section">
-        <form id="analysis-form" class="row">
-            <div class="col-md-4 form-group">
-                <label for="analysis-type">分析类型</label>
-                <select id="analysis-type" name="type" class="form-control">
-                    {% for type in analysis_types %}
-                    <option value="{{ type.id }}">{{ type.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            
-            <div class="col-md-8 form-group">
-                <label>品牌筛选</label>
-                <div class="d-flex flex-wrap">
-                    <select id="brand-filter" name="brands" class="form-control" multiple>
-                        {% for brand in brands %}
-                        <option value="{{ brand.id }}">{{ brand.name }}</option>
+    <div class="analysis-container">
+        <div class="filter-form">
+            <h3>筛选条件</h3>
+            <form id="analysisFilterForm">
+                <div class="form-group">
+                    <label for="analysisType">分析类型:</label>
+                    <select id="analysisType" name="type">
+                        {% for type in analysis_types %}
+                            <option value="{{ type.id }}">{{ type.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
-            </div>
-            
-            <div class="col-md-4 form-group">
-                <label>地区筛选</label>
-                <select id="region-filter" name="regions" class="form-control" multiple>
-                    <!-- 地区选项将通过AJAX动态加载 -->
-                </select>
-            </div>
-            
-            <div class="col-md-4 form-group">
-                <label>年份范围</label>
-                <div class="d-flex">
-                    <input type="number" id="year-from" name="year_from" class="form-control mr-2" placeholder="起始年份">
-                    <input type="number" id="year-to" name="year_to" class="form-control" placeholder="结束年份">
+
+                <div class="form-group">
+                    <label>品牌:</label>
+                    <div id="brandCheckboxes">
+                        <label><input type="checkbox" id="selectAllBrands" checked> 全选/取消全选</label><br>
+                        {% for brand in brands %}
+                            <label><input type="checkbox" name="brands" value="{{ brand.id }}" checked> {{ brand.name }}</label><br>
+                        {% endfor %}
+                    </div>
                 </div>
-            </div>
-            
-            <div class="col-md-4 form-group">
-                <label>里程范围(万公里)</label>
-                <div class="d-flex">
-                    <input type="number" id="mileage-from" name="mileage_from" class="form-control mr-2" placeholder="最小里程">
-                    <input type="number" id="mileage-to" name="mileage_to" class="form-control" placeholder="最大里程">
+
+                <div class="form-group">
+                    <label>地区:</label>
+                    <div>
+                        <label><input type="checkbox" id="selectAllRegions" checked> 全选/取消全选</label><br>
+                        <select id="regions" name="regions" multiple size="5">
+                            <!-- 地区选项将通过JS动态加载 -->
+                        </select>
+                    </div>
                 </div>
-            </div>
-            
-            <div class="col-12 text-right">
-                <button type="submit" class="btn btn-primary">分析数据</button>
-            </div>
-        </form>
-    </div>
-    
-    <div class="loading">
-        <img src="{% static 'admin/img/icon-loading.gif' %}" alt="Loading...">
-        <p>正在分析数据，请稍候...</p>
-    </div>
-    
-    <div class="results-section" style="display: none;">
-        <div class="summary-stats">
-            <div class="stat-box">
-                <h4>总车辆数</h4>
-                <p id="total-count">0</p>
-            </div>
-            <div class="stat-box">
-                <h4>平均价格</h4>
-                <p id="avg-price">0.00 万元</p>
-            </div>
-            <div class="stat-box">
-                <h4>最低价格</h4>
-                <p id="min-price">0.00 万元</p>
-            </div>
-            <div class="stat-box">
-                <h4>最高价格</h4>
-                <p id="max-price">0.00 万元</p>
-            </div>
+
+                <div class="form-group date-range-group">
+                    <label>上牌日期范围:</label>
+                    <input type="text" id="date_from" name="date_from" class="datepicker" placeholder="开始日期" readonly>
+                    <input type="text" id="date_to" name="date_to" class="datepicker" placeholder="结束日期" readonly>
+                </div>
+
+                <div class="form-group">
+                    <label>里程范围 (万公里):</label>
+                    <input type="number" id="mileage_from" name="mileage_from" placeholder="最小里程" step="0.1">
+                    <input type="number" id="mileage_to" name="mileage_to" placeholder="最大里程" step="0.1">
+                </div>
+
+                <button type="button" id="applyFilterBtn">应用分析</button>
+            </form>
         </div>
-        
         <div class="chart-container">
-            <canvas id="analysis-chart"></canvas>
-        </div>
-        
-        <div class="table-responsive">
-            <table id="data-table" class="table table-striped table-bordered">
-                <thead>
-                    <tr id="table-header">
-                        <!-- 表头将根据分析类型动态生成 -->
-                    </tr>
-                </thead>
-                <tbody id="table-body">
-                    <!-- 表格数据将根据分析结果动态生成 -->
-                </tbody>
-            </table>
+            <div id="loadingMessage" style="text-align:center;padding:50px;">请点击"应用分析"按钮加载数据...</div>
+            <canvas id="analysisChart" style="display:none;"></canvas>
+            <div id="dataSummary" class="data-summary" style="display:none;"></div>
+            <div class="export-buttons" style="margin-top: 20px; display:none;">
+                <button id="exportImageBtn">导出图片</button>
+                <button id="exportExcelBtn">导出Excel</button>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-    $(document).ready(function() {
-        // 加载地区数据
-        $.ajax({
-            url: '{% url "admin:crawler_usedcar_analysis_data" %}',
-            data: { type: 'count_by_region' },
-            success: function(data) {
-                var regionSelect = $('#region-filter');
-                regionSelect.empty();
-                
-                $.each(data.labels, function(index, region) {
-                    regionSelect.append($('<option></option>').val(region).text(region));
+document.addEventListener('DOMContentLoaded', function() {
+    const analysisTypeSelect = document.getElementById('analysisType');
+    const applyFilterBtn = document.getElementById('applyFilterBtn');
+    const exportImageBtn = document.getElementById('exportImageBtn');
+    const exportExcelBtn = document.getElementById('exportExcelBtn');
+    const selectAllBrandsCheckbox = document.getElementById('selectAllBrands');
+    const selectAllRegionsCheckbox = document.getElementById('selectAllRegions');
+    const brandCheckboxes = document.querySelectorAll('#brandCheckboxes input[name="brands"]');
+    let currentChart;
+    
+    // 检查jQuery和jQuery UI是否正确加载
+    console.log('页面加载完成，jQuery版本:', typeof $, $?.fn?.jquery);
+    console.log('jQuery UI是否加载:', typeof $.ui, $.ui?.version);
+    console.log('datepicker是否可用:', typeof $.fn.datepicker);
+
+    // 全选/取消全选品牌
+    selectAllBrandsCheckbox.addEventListener('change', function() {
+        const checkboxes = document.querySelectorAll('#brandCheckboxes input[name="brands"]');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = selectAllBrandsCheckbox.checked;
+        });
+    });
+
+    // 从后端获取地区数据
+    const regionsSelect = document.getElementById('regions');
+    
+    // 显示加载中提示
+    const loadingOption = document.createElement('option');
+    loadingOption.value = '';
+    loadingOption.textContent = '-- 加载中... --';
+    loadingOption.disabled = true;
+    regionsSelect.innerHTML = '';
+    regionsSelect.appendChild(loadingOption);
+    
+    // 获取地区数据
+    fetch('{% url "admin:crawler_usedcar_analysis_data" %}?type=get_regions')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('网络响应不正常，状态码: ' + response.status);
+            }
+            return response.json();
+        })
+        .then(data => {
+            // 清空现有选项
+            regionsSelect.innerHTML = '';
+            
+            console.log('获取到地区数据:', data);
+            
+            if (data.regions && Array.isArray(data.regions)) {
+                // 添加地区选项
+                data.regions.forEach(region => {
+                    if (region) { // 确保地区名不为空
+                        const option = document.createElement('option');
+                        option.value = region;
+                        option.textContent = region;
+                        option.selected = true; // 默认选中所有地区
+                        regionsSelect.appendChild(option);
+                    }
                 });
-            }
-        });
-        
-        // 图表对象
-        var chart = null;
-        
-        // 表单提交
-        $('#analysis-form').on('submit', function(e) {
-            e.preventDefault();
-            
-            // 显示加载中
-            $('.loading').show();
-            $('.results-section').hide();
-            
-            // 如果已有图表，销毁它
-            if (chart) {
-                chart.destroy();
-            }
-            
-            // 获取表单数据
-            var formData = $(this).serialize();
-            
-            // 发送AJAX请求
-            $.ajax({
-                url: '{% url "admin:crawler_usedcar_analysis_data" %}',
-                data: formData,
-                success: function(data) {
-                    // 隐藏加载中，显示结果
-                    $('.loading').hide();
-                    $('.results-section').show();
+                
+                // 如果没有地区数据，添加提示
+                if (data.regions.length === 0) {
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = '-- 无地区数据 --';
+                    option.disabled = true;
+                    regionsSelect.appendChild(option);
+                } else {
+                    // 添加一个提示，表示加载成功
+                    console.log('成功加载 ' + data.regions.length + ' 个地区数据');
                     
-                    // 更新统计摘要
-                    $('#total-count').text(data.summary.total_count);
-                    $('#avg-price').text(data.summary.avg_price.toFixed(2) + ' 万元');
-                    $('#min-price').text(data.summary.min_price.toFixed(2) + ' 万元');
-                    $('#max-price').text(data.summary.max_price.toFixed(2) + ' 万元');
-                    
-                    // 渲染图表
-                    renderChart(data);
-                    
-                    // 渲染表格
-                    renderTable(data);
-                },
-                error: function() {
-                    $('.loading').hide();
-                    alert('数据分析请求失败，请重试。');
+                    // 地区数据加载完成后，自动触发分析
+                    setTimeout(function() {
+                        console.log('地区数据加载完成，自动触发分析...');
+                        fetchAnalysisData();
+                    }, 500);
                 }
-            });
+                
+                console.log('成功加载地区数据，共', data.regions.length, '个地区');
+            } else {
+                console.error('地区数据格式不正确');
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = '-- 地区数据格式错误 --';
+                option.disabled = true;
+                regionsSelect.appendChild(option);
+                alert('地区数据格式不正确，请检查控制台日志');
+            }
+        })
+        .catch(error => {
+            console.error('获取地区数据失败:', error);
+            // 添加错误提示
+            regionsSelect.innerHTML = '';
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = '-- 获取地区失败 --';
+            option.disabled = true;
+            regionsSelect.appendChild(option);
+            alert('获取地区数据失败: ' + error.message);
+        });
+    
+    // 全选/取消全选地区
+    selectAllRegionsCheckbox.addEventListener('change', function() {
+        Array.from(regionsSelect.options).forEach(option => {
+            option.selected = selectAllRegionsCheckbox.checked;
+        });
+    });
+
+    function fetchAnalysisData() {
+        // 显示加载中提示
+        document.getElementById('loadingMessage').style.display = 'block';
+        document.getElementById('loadingMessage').innerHTML = '<div style="text-align:center;">数据加载中，请稍候...</div>';
+        document.getElementById('analysisChart').style.display = 'none';
+        document.getElementById('dataSummary').style.display = 'none';
+        document.querySelector('.export-buttons').style.display = 'none';
+        
+        const form = document.getElementById('analysisFilterForm');
+        const formData = new FormData(form);
+        const params = new URLSearchParams();
+        
+        console.log('开始构建分析请求参数...');
+        
+        // 手动构建参数，确保多选值正确传递
+        params.append('type', analysisTypeSelect.value);
+        console.log('分析类型:', analysisTypeSelect.value);
+        
+        // 添加选中的品牌
+        const selectedBrands = [];
+        console.log('查找选中的品牌...');
+        document.querySelectorAll('input[name="brands"]:checked').forEach(checkbox => {
+            selectedBrands.push(checkbox.value);
+            params.append('brands', checkbox.value);
+            console.log('选中品牌:', checkbox.value);
+        });
+        if (selectedBrands.length === 0) {
+            alert('请至少选择一个品牌');
+            document.getElementById('loadingMessage').innerHTML = '<div style="color:orange;text-align:center;">请至少选择一个品牌</div>';
+            return;
+        }
+        console.log('选中品牌总数:', selectedBrands.length);
+        
+        // 添加选中的地区
+        const selectedRegions = Array.from(regionsSelect.selectedOptions);
+        if (selectedRegions.length === 0) {
+            alert('请至少选择一个地区');
+            document.getElementById('loadingMessage').innerHTML = '<div style="color:orange;text-align:center;">请至少选择一个地区</div>';
+            return;
+        }
+        console.log('查找选中的地区...');
+        selectedRegions.forEach(option => {
+            params.append('regions', option.value);
+            console.log('选中地区:', option.value);
+        });
+        console.log('选中地区总数:', selectedRegions.length);
+        
+        // 添加日期范围
+        const dateFrom = document.getElementById('date_from').value;
+        const dateTo = document.getElementById('date_to').value;
+        console.log('日期范围:', dateFrom, '至', dateTo);
+        if (dateFrom) params.append('registration_date_from', dateFrom);
+        if (dateTo) params.append('registration_date_to', dateTo);
+        
+        // 添加里程范围
+        const mileageFrom = document.getElementById('mileage_from').value;
+        const mileageTo = document.getElementById('mileage_to').value;
+        if (mileageFrom) params.append('mileage_from', mileageFrom);
+        if (mileageTo) params.append('mileage_to', mileageTo);
+
+        console.log('发送分析请求，参数:', params.toString());
+        
+        // 发送请求
+        const requestUrl = `{% url 'admin:crawler_usedcar_analysis_data' %}?${params.toString()}`;
+        console.log('发送请求到:', requestUrl);
+        
+        // 设置超时
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('请求超时，服务器响应时间过长')), 30000);
         });
         
-        // 渲染图表
-        function renderChart(data) {
-            var ctx = document.getElementById('analysis-chart').getContext('2d');
-            
-            var chartConfig = {
-                type: data.type,
-                data: {
-                    labels: data.labels,
-                    datasets: [{
-                        label: data.title,
-                        data: data.values,
-                        backgroundColor: getColors(data.labels.length, 0.7),
-                        borderColor: getColors(data.labels.length, 1),
-                        borderWidth: 1
-                    }]
+        // 使用Promise.race竞争超时
+        Promise.race([
+            fetch(requestUrl),
+            timeoutPromise
+        ])
+            .then(response => {
+                console.log('收到响应状态:', response.status);
+                if (!response.ok) {
+                    throw new Error('网络响应不正常，状态码: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('收到数据:', data);
+                if (data.error) {
+                    console.error('服务器返回错误:', data.error);
+                    document.getElementById('loadingMessage').innerHTML = `<div style="color:red;text-align:center;">${data.error}</div>`;
+                    return;
+                }
+                
+                if (data && data.labels && data.values) {
+                    console.log('开始渲染图表...');
+                    renderChart(data);
+                    // 隐藏加载提示
+                    document.getElementById('loadingMessage').style.display = 'none';
+                    // 显示图表和导出按钮
+                    document.getElementById('analysisChart').style.display = 'block';
+                    document.querySelector('.export-buttons').style.display = 'block';
+                } else {
+                    throw new Error('返回数据格式不正确，缺少必要的图表数据');
+                }
+            })
+            .catch(error => {
+                console.error('获取分析数据失败:', error);
+                document.getElementById('loadingMessage').innerHTML = `<div style="color:red;text-align:center;">获取数据失败: ${error.message}</div>`;
+                // 显示重试按钮
+                document.getElementById('loadingMessage').innerHTML += '<div style="margin-top:15px;"><button onclick="fetchAnalysisData()">重试</button></div>';
+            });
+    }
+
+    function renderChart(data) {
+        const ctx = document.getElementById('analysisChart').getContext('2d');
+        if (currentChart) {
+            currentChart.destroy();
+        }
+        
+        // 设置图表颜色
+        let backgroundColor, borderColor;
+        if (data.type === 'pie' || data.type === 'doughnut') {
+            // 为饼图生成多种颜色
+            backgroundColor = data.labels.map((_, i) => {
+                const hue = (i * 137) % 360; // 使用黄金角来分散颜色
+                return `hsla(${hue}, 70%, 60%, 0.7)`;
+            });
+            borderColor = data.labels.map((_, i) => {
+                const hue = (i * 137) % 360;
+                return `hsla(${hue}, 70%, 50%, 1)`;
+            });
+        } else {
+            // 条形图和线图使用单一颜色
+            backgroundColor = 'rgba(54, 162, 235, 0.5)';
+            borderColor = 'rgba(54, 162, 235, 1)';
+        }
+        
+        const chartConfig = {
+            type: data.type || 'bar',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: data.title,
+                    data: data.values,
+                    backgroundColor: backgroundColor,
+                    borderColor: borderColor,
+                    borderWidth: 1,
+                    minBarLength: data.type === 'bar' ? 5 : undefined,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        display: data.type !== 'pie' && data.type !== 'doughnut'
+                    },
+                    x: {
+                        display: data.type !== 'pie' && data.type !== 'doughnut'
+                    }
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: data.title,
-                            font: {
-                                size: 16
-                            }
-                        },
-                        legend: {
-                            display: data.type === 'pie'
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    var label = context.label || '';
-                                    var value = context.raw;
-                                    var count = data.counts ? data.counts[context.dataIndex] : null;
-                                    
-                                    if (label) {
-                                        label += ': ';
-                                    }
-                                    
-                                    if (data.type === 'pie') {
-                                        label += value + ' 辆';
-                                    } else if (data.title.includes('价格')) {
-                                        label += value.toFixed(2) + ' 万元';
-                                        if (count) {
-                                            label += ' (' + count + ' 辆)';
-                                        }
-                                    } else {
-                                        label += value;
-                                    }
-                                    
-                                    return label;
-                                }
-                            }
+                plugins: {
+                    title: {
+                        display: true,
+                        text: data.title,
+                        font: {
+                            size: 16
                         }
                     },
-                    scales: {
-                        y: {
-                            display: data.type !== 'pie',
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: data.title.includes('价格') ? '价格 (万元)' : '数量',
-                                font: {
-                                    size: 14
+                    legend: {
+                        display: data.type === 'pie' || data.type === 'doughnut',
+                        position: 'right'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) {
+                                    label += ': ';
                                 }
-                            }
-                        },
-                        x: {
-                            display: data.type !== 'pie',
-                            title: {
-                                display: true,
-                                text: getXAxisTitle(data),
-                                font: {
-                                    size: 14
+                                if (context.parsed.y !== undefined) {
+                                    label += context.parsed.y;
+                                } else if (context.parsed !== undefined) {
+                                    label += context.parsed;
                                 }
+                                return label;
                             }
                         }
                     }
                 }
-            };
-            
-            // 如果有最小值和最大值，添加误差线
-            if (data.min_values && data.max_values && data.type !== 'pie') {
-                chartConfig.data.datasets[0].errorBars = {
-                    y: {
-                        plus: data.max_values.map((max, i) => max - data.values[i]),
-                        minus: data.values.map((val, i) => val - data.min_values[i])
-                    }
-                };
             }
-            
-            chart = new Chart(ctx, chartConfig);
-        }
+        };
         
-        // 渲染表格
-        function renderTable(data) {
-            var header = $('#table-header');
-            var body = $('#table-body');
-            
-            // 清空表格
-            header.empty();
-            body.empty();
-            
-            // 根据分析类型设置表头
-            var analysisType = $('#analysis-type').val();
-            var columns = [];
-            
-            if (analysisType === 'price_by_brand') {
-                columns = ['品牌', '平均价格(万元)', '车辆数量', '最低价格(万元)', '最高价格(万元)'];
-            } else if (analysisType === 'price_by_region') {
-                columns = ['地区', '平均价格(万元)', '车辆数量', '最低价格(万元)', '最高价格(万元)'];
-            } else if (analysisType === 'price_by_year') {
-                columns = ['年份', '平均价格(万元)', '车辆数量', '最低价格(万元)', '最高价格(万元)'];
-            } else if (analysisType === 'price_by_mileage') {
-                columns = ['里程范围(万公里)', '平均价格(万元)', '车辆数量', '最低价格(万元)', '最高价格(万元)'];
-            } else if (analysisType.startsWith('count_by_')) {
-                columns = [getColumnName(analysisType), '车辆数量', '占比(%)'];
-            }
-            
-            // 添加表头
-            var headerRow = '';
-            columns.forEach(function(column) {
-                headerRow += '<th>' + column + '</th>';
-            });
-            header.html(headerRow);
-            
-            // 添加表格数据
-            var rows = '';
-            var total = data.summary.total_count;
-            
-            for (var i = 0; i < data.labels.length; i++) {
-                var row = '<tr>';
-                
-                if (analysisType === 'price_by_brand' || analysisType === 'price_by_region' || 
-                    analysisType === 'price_by_year' || analysisType === 'price_by_mileage') {
-                    row += '<td>' + data.labels[i] + '</td>';
-                    row += '<td>' + data.values[i].toFixed(2) + '</td>';
-                    row += '<td>' + data.counts[i] + '</td>';
-                    row += '<td>' + data.min_values[i].toFixed(2) + '</td>';
-                    row += '<td>' + data.max_values[i].toFixed(2) + '</td>';
-                } else if (analysisType.startsWith('count_by_')) {
-                    var percentage = (data.values[i] / total * 100).toFixed(2);
-                    row += '<td>' + data.labels[i] + '</td>';
-                    row += '<td>' + data.values[i] + '</td>';
-                    row += '<td>' + percentage + '%</td>';
-                }
-                
-                row += '</tr>';
-                rows += row;
-            }
-            
-            body.html(rows);
-        }
+        currentChart = new Chart(ctx, chartConfig);
         
-        // 获取X轴标题
-        function getXAxisTitle(data) {
-            var analysisType = $('#analysis-type').val();
-            
-            if (analysisType === 'price_by_brand') {
-                return '品牌';
-            } else if (analysisType === 'price_by_region') {
-                return '地区';
-            } else if (analysisType === 'price_by_year') {
-                return '年份';
-            } else if (analysisType === 'price_by_mileage') {
-                return '里程范围(万公里)';
-            } else if (analysisType === 'count_by_brand') {
-                return '品牌';
-            } else if (analysisType === 'count_by_region') {
-                return '地区';
-            } else if (analysisType === 'count_by_fuel') {
-                return '燃料类型';
-            } else if (analysisType === 'count_by_transmission') {
-                return '变速箱类型';
-            } else if (analysisType === 'count_by_color') {
-                return '车身颜色';
-            }
-            
-            return '';
+        // 显示数据摘要
+        if (data.summary) {
+            const summaryDiv = document.getElementById('dataSummary');
+            summaryDiv.style.display = 'block';
+            summaryDiv.innerHTML = `
+                <h4>数据摘要</h4>
+                <p>总数量: ${data.summary.total_count || 0} 辆</p>
+                <p>平均价格: ${(data.summary.avg_price || 0).toFixed(2)} 万元</p>
+                <p>最低价格: ${(data.summary.min_price || 0).toFixed(2)} 万元</p>
+                <p>最高价格: ${(data.summary.max_price || 0).toFixed(2)} 万元</p>
+            `;
         }
-        
-        // 获取列名
-        function getColumnName(analysisType) {
-            if (analysisType === 'count_by_brand') {
-                return '品牌';
-            } else if (analysisType === 'count_by_region') {
-                return '地区';
-            } else if (analysisType === 'count_by_fuel') {
-                return '燃料类型';
-            } else if (analysisType === 'count_by_transmission') {
-                return '变速箱类型';
-            } else if (analysisType === 'count_by_color') {
-                return '车身颜色';
+    }
+
+    // 应用分析按钮点击事件
+    applyFilterBtn.addEventListener('click', function(e) {
+        e.preventDefault(); // 防止表单提交
+        console.log('应用分析按钮被点击');
+        fetchAnalysisData();
+    });
+    
+    // 添加调试信息
+    console.log('页面脚本已加载，jQuery版本:', $.fn?.jquery, 'jQuery UI版本:', $.ui?.version);
+
+    // 导出图片按钮点击事件
+    exportImageBtn.addEventListener('click', function(e) {
+        e.preventDefault(); // 防止默认行为
+        if (currentChart) {
+            try {
+                // 创建一个临时链接并触发下载
+                const link = document.createElement('a');
+                link.href = currentChart.toBase64Image();
+                link.download = (document.getElementById('analysisType').selectedOptions[0].text || 'analysis_chart') + '.png';
+                document.body.appendChild(link); // 添加到DOM以便在Firefox中工作
+                link.click();
+                document.body.removeChild(link); // 清理
+            } catch (error) {
+                console.error('导出图片失败:', error);
+                alert('导出图片失败: ' + error.message);
             }
-            
-            return '';
-        }
-        
-        // 生成颜色数组
-        function getColors(count, alpha) {
-            var colors = [];
-            var hueStep = 360 / count;
-            
-            for (var i = 0; i < count; i++) {
-                var hue = i * hueStep;
-                colors.push('hsla(' + hue + ', 70%, 60%, ' + alpha + ')');
-            }
-            
-            return colors;
+        } else {
+            alert('请先生成图表再导出图片');
         }
     });
+
+    // 导出Excel按钮点击事件
+    exportExcelBtn.addEventListener('click', function(e) {
+        e.preventDefault(); // 防止默认行为
+        if (!currentChart) {
+            alert('请先生成图表再导出Excel');
+            return;
+        }
+        
+        try {
+            const form = document.getElementById('analysisFilterForm');
+            const formData = new FormData(form);
+            const params = new URLSearchParams();
+            
+            // 手动构建参数，确保多选值正确传递
+            params.append('type', analysisTypeSelect.value);
+            
+            // 添加选中的品牌
+            const selectedBrands = document.querySelectorAll('#brandCheckboxes input[name="brands"]:checked');
+            selectedBrands.forEach(checkbox => {
+                params.append('brands', checkbox.value);
+            });
+            
+            // 添加选中的地区
+            const selectedRegions = Array.from(regionsSelect.selectedOptions);
+            selectedRegions.forEach(option => {
+                params.append('regions', option.value);
+            });
+            
+            // 添加日期范围
+            const dateFrom = document.getElementById('date_from').value;
+            const dateTo = document.getElementById('date_to').value;
+            if (dateFrom) params.append('registration_date_from', dateFrom);
+            if (dateTo) params.append('registration_date_to', dateTo);
+            
+            // 添加里程范围
+            const mileageFrom = document.getElementById('mileage_from').value;
+            const mileageTo = document.getElementById('mileage_to').value;
+            if (mileageFrom) params.append('mileage_from', mileageFrom);
+            if (mileageTo) params.append('mileage_to', mileageTo);
+            
+            // 添加导出标志
+            params.append('export_to_excel', 'true');
+            
+            console.log('导出Excel，参数:', params.toString());
+            
+            // 触发下载
+            window.location.href = `{% url 'admin:crawler_usedcar_analysis_data' %}?${params.toString()}`;
+        } catch (error) {
+            console.error('导出Excel失败:', error);
+            alert('导出Excel失败: ' + error.message);
+        }
+    });
+    
+    // 页面加载完成后，自动点击应用分析按钮，获取默认数据
+    setTimeout(function() {
+        console.log('页面加载完成，自动触发分析...');
+        fetchAnalysisData();
+    }, 500); // 延迟500毫秒，确保地区数据已加载完成
+});
 </script>
 {% endblock %}
