@@ -53,10 +53,12 @@ INSTALLED_APPS = [
     "data_analysis",
     "api",
     "crawler",
-    "visualization",
+    "analysis_records",
+    "analysis_results",
     "car_analysis",
     "car_api",
-    "analysis_records", # 新增分析记录应用
+    "analysis",
+    "visualization",
 ]
 
 MIDDLEWARE = [

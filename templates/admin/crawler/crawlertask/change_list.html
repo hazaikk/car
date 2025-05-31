@@ -1,0 +1,304 @@
+{% extends "admin/change_list.html" %}
+{% load i18n admin_urls static %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <style>
+        .create-task-button {
+            background-color: #28a745;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            display: inline-block;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .create-task-button:hover {
+            background-color: #218838;
+            color: white;
+            text-decoration: none;
+        }
+        
+        .task-status {
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .progress-bar {
+            width: 100px;
+            height: 10px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 3px;
+        }
+        .progress-fill {
+            height: 100%;
+            background-color: #28a745;
+            transition: width 0.3s ease;
+        }
+        .progress-text {
+            font-size: 11px;
+            color: #6c757d;
+        }
+        .status-running {
+            background-color: #17a2b8;
+            color: white;
+        }
+        .status-completed {
+            background-color: #28a745;
+            color: white;
+        }
+        .status-failed {
+            background-color: #dc3545;
+            color: white;
+        }
+        .status-pending {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        .real-time-info {
+            font-size: 10px;
+            color: #adb5bd;
+            margin-top: 2px;
+        }
+        
+        .task-info-panel {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .task-stats {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 10px;
+            background-color: white;
+            border-radius: 3px;
+            border: 1px solid #dee2e6;
+            min-width: 100px;
+        }
+        
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+    </style>
+    
+    <script>
+    // 自动刷新进度信息
+    function updateTaskProgress() {
+        const progressElements = document.querySelectorAll('[data-task-id]');
+        
+        progressElements.forEach(element => {
+            const taskId = element.dataset.taskId;
+            const status = element.dataset.status;
+            
+            // 只更新运行中的任务
+            if (status === 'running') {
+                fetch(`progress/${taskId}/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            const progressFill = element.querySelector('.progress-fill');
+                            const progressText = element.querySelector('.progress-text');
+                            const realTimeInfo = element.querySelector('.real-time-info');
+                            
+                            if (progressFill) {
+                                progressFill.style.width = data.progress_percentage + '%';
+                            }
+                            
+                            if (progressText) {
+                                progressText.textContent = `${data.actual_count}/${data.target_count} (${data.progress_percentage.toFixed(1)}%)`;
+                            }
+                            
+                            if (realTimeInfo) {
+                                realTimeInfo.textContent = `最后更新: ${new Date().toLocaleTimeString()}`;
+                            }
+                            
+                            // 如果任务完成，刷新页面
+                            if (data.status !== 'running') {
+                                setTimeout(() => {
+                                    window.location.reload();
+                                }, 1000);
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('更新进度失败:', error);
+                    });
+            }
+        });
+    }
+    
+    // 每5秒更新一次进度
+    setInterval(updateTaskProgress, 5000);
+    
+    // 页面加载完成后立即更新一次
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(updateTaskProgress, 1000);
+    });
+    </script>
+{% endblock %}
+
+{% block content_title %}
+<h1>爬虫任务管理</h1>
+{% endblock %}
+
+{% block object-tools %}
+<div class="object-tools">
+    <a href="{{ create_task_url }}" class="create-task-button">
+        <i class="icon-plus"></i> 创建新任务
+    </a>
+</div>
+{% endblock %}
+
+{% block result_list %}
+{% if cl.result_count %}
+<div class="task-info-panel">
+    <h3>任务统计</h3>
+    <div class="task-stats">
+        <div class="stat-item">
+            <div class="stat-number">{{ cl.result_count }}</div>
+            <div class="stat-label">总任务数</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number" id="pending-count">-</div>
+            <div class="stat-label">等待中</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number" id="running-count">-</div>
+            <div class="stat-label">运行中</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number" id="completed-count">-</div>
+            <div class="stat-label">已完成</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number" id="failed-count">-</div>
+            <div class="stat-label">失败</div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 统计各状态任务数量
+document.addEventListener('DOMContentLoaded', function() {
+    const statusElements = document.querySelectorAll('.task-status');
+    const counts = {
+        'status-pending': 0,
+        'status-running': 0,
+        'status-completed': 0,
+        'status-failed': 0
+    };
+    
+    statusElements.forEach(element => {
+        const className = element.className.split(' ').find(cls => cls.startsWith('status-'));
+        if (className && counts.hasOwnProperty(className)) {
+            counts[className]++;
+        }
+    });
+    
+    document.getElementById('pending-count').textContent = counts['status-pending'];
+    document.getElementById('running-count').textContent = counts['status-running'];
+    document.getElementById('completed-count').textContent = counts['status-completed'];
+    document.getElementById('failed-count').textContent = counts['status-failed'];
+});
+</script>
+{% endif %}
+
+{{ block.super }}
+{% endblock %}
+
+{% block content %}
+    {{ block.super }}
+    
+    <script>
+    (function() {
+        // 实时更新进度的函数
+        function updateTaskProgress() {
+            const runningTasks = document.querySelectorAll('[data-task-id][data-status="running"]');
+            
+            runningTasks.forEach(function(element) {
+                const taskId = element.getAttribute('data-task-id');
+                
+                fetch(`/admin/crawler/crawlertask/progress/${taskId}/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            console.error('获取任务进度失败:', data.error);
+                            return;
+                        }
+                        
+                        // 更新进度条
+                        const progressBar = element.querySelector('.progress-fill');
+                        const progressText = element.querySelector('.progress-text');
+                        const statusElement = element.querySelector('.task-status');
+                        const realTimeInfo = element.querySelector('.real-time-info');
+                        
+                        if (progressBar) {
+                            progressBar.style.width = data.progress_percentage + '%';
+                        }
+                        
+                        if (progressText) {
+                            progressText.textContent = `${data.actual_count}/${data.target_count} (${data.progress_percentage.toFixed(1)}%)`;
+                        }
+                        
+                        if (statusElement) {
+                            statusElement.textContent = data.status_display;
+                            statusElement.className = 'task-status status-' + data.status;
+                        }
+                        
+                        if (realTimeInfo) {
+                            const now = new Date();
+                            realTimeInfo.textContent = `最后更新: ${now.toLocaleTimeString()}`;
+                        }
+                        
+                        // 如果任务完成，更新页面状态
+                        if (data.status === 'completed' || data.status === 'failed') {
+                            element.setAttribute('data-status', data.status);
+                            // 刷新页面以显示新的操作按钮
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 2000);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('获取任务进度时发生错误:', error);
+                    });
+            });
+        }
+        
+        // 页面加载完成后开始定时更新
+        document.addEventListener('DOMContentLoaded', function() {
+            // 立即执行一次
+            updateTaskProgress();
+            
+            // 每5秒更新一次进度
+            setInterval(updateTaskProgress, 5000);
+        });
+    })();
+    </script>
+{% endblock %}

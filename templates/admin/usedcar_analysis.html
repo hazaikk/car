@@ -52,6 +52,66 @@
         }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- ECharts for China Map -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script>
+        // 全局变量跟踪地图数据加载状态
+        window.chinaMapLoaded = false;
+        window.chinaMapLoadPromise = null;
+        
+        // 动态加载中国地图数据
+        function loadChinaMap() {
+            if (window.chinaMapLoadPromise) {
+                return window.chinaMapLoadPromise;
+            }
+            
+            window.chinaMapLoadPromise = new Promise((resolve, reject) => {
+                // 检查是否已经加载
+                if (window.chinaMapLoaded || (typeof echarts !== 'undefined' && echarts.getMap && echarts.getMap('china'))) {
+                    console.log('中国地图数据已存在');
+                    window.chinaMapLoaded = true;
+                    resolve();
+                    return;
+                }
+                
+                console.log('开始加载中国地图数据...');
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/echarts@5.4.3/map/js/china.js';
+                script.onload = () => {
+                    console.log('中国地图数据加载成功');
+                    window.chinaMapLoaded = true;
+                    // 验证地图数据是否正确注册
+                    setTimeout(() => {
+                        if (typeof echarts !== 'undefined' && echarts.getMap && echarts.getMap('china')) {
+                            console.log('地图数据验证成功');
+                            resolve();
+                        } else {
+                            console.error('地图数据验证失败');
+                            reject(new Error('地图数据注册失败'));
+                        }
+                    }, 100);
+                };
+                script.onerror = () => {
+                    console.error('中国地图数据加载失败');
+                    reject(new Error('地图数据加载失败'));
+                };
+                document.head.appendChild(script);
+            });
+            
+            return window.chinaMapLoadPromise;
+        }
+        
+        // 页面加载完成后加载地图数据
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('页面加载完成，开始初始化地图数据...');
+            loadChinaMap().then(() => {
+                console.log('地图数据初始化完成');
+            }).catch(error => {
+                console.error('地图初始化失败:', error);
+            });
+        });
+    </script>
     <style>
         .analysis-container {
             display: flex;
@@ -102,6 +162,12 @@
             border: 1px solid #ddd;
             border-radius: 5px;
             min-height: 500px;
+            max-width: 1200px; /* 增加最大宽度 */
+            overflow-y: auto; /* 允许垂直滚动 */
+        }
+        #analysisChart {
+            height: 500px !important; /* 设置固定高度 */
+            max-width: 100% !important; /* 限制图表宽度 */
         }
         .export-buttons {
             margin-top: 15px;
@@ -138,17 +204,33 @@
             font-size: 13px;
         }
         /* 品牌选择区域样式 */
-        #brandCheckboxes {
-            max-height: 150px;
-            overflow-y: auto;
-            border: 1px solid #ddd;
-            padding: 5px;
-            margin-top: 5px;
-            background-color: white;
+        #brands {
+            height: 120px;
         }
         /* 地区选择区域样式 */
         #regions {
             height: 120px;
+        }
+        /* 数据表格样式 */
+        #dataTable {
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        #dataTable th, #dataTable td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        #dataTable th {
+            font-weight: bold;
+            background-color: #f8f9fa !important;
+            border-bottom: 2px solid #dee2e6;
+        }
+        #dataTable tbody tr:hover {
+            background-color: #f5f5f5;
+        }
+        #dataTable tbody tr:nth-child(even) {
+            background-color: #f9f9f9;
         }
     </style>
 {% endblock %}
@@ -156,6 +238,9 @@
 {% block content %}
 <div id="content-main">
     <h1>{{ title }}</h1>
+    <div style="margin-bottom: 15px;">
+        <a href="{% url 'admin:crawler_usedcar_changelist' %}" class="button" style="background-color: #417690; color: white !important; padding: 8px 16px; text-decoration: none; border-radius: 4px; display: inline-block;">← 返回二手车数据列表</a>
+    </div>
     <div class="analysis-container">
         <div class="filter-form">
             <h3>筛选条件</h3>
@@ -171,11 +256,13 @@
 
                 <div class="form-group">
                     <label>品牌:</label>
-                    <div id="brandCheckboxes">
+                    <div>
                         <label><input type="checkbox" id="selectAllBrands" checked> 全选/取消全选</label><br>
-                        {% for brand in brands %}
-                            <label><input type="checkbox" name="brands" value="{{ brand.id }}" checked> {{ brand.name }}</label><br>
-                        {% endfor %}
+                        <select id="brands" name="brands" multiple size="5">
+                            {% for brand in brands %}
+                                <option value="{{ brand.id }}" selected>{{ brand.name }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
                 </div>
 
@@ -206,11 +293,32 @@
         </div>
         <div class="chart-container">
             <div id="loadingMessage" style="text-align:center;padding:50px;">请点击"应用分析"按钮加载数据...</div>
-            <canvas id="analysisChart" style="display:none;"></canvas>
-            <div id="dataSummary" class="data-summary" style="display:none;"></div>
+            
+            <!-- 可视化图表区域 -->
+            <div class="visualization-area" style="margin-bottom: 20px;">
+                <canvas id="analysisChart" style="display:none; max-height: 450px; max-width: 100%;"></canvas>
+                <div id="chinaMapChart" style="display:none; height: 500px; width: 100%;"></div>
+            </div>
+            
+            <!-- 数据表格展示区域 -->
+            <div id="dataTableContainer" style="display:none; margin-top: 20px;">
+                <h4>详细数据</h4>
+                <div style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd;">
+                    <table id="dataTable" class="table table-striped" style="width: 100%; margin: 0;">
+                        <thead id="tableHeader" style="background-color: #f8f9fa; position: sticky; top: 0;">
+                        </thead>
+                        <tbody id="tableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- 数据摘要区域 -->
+            <div id="dataSummary" class="data-summary" style="display:none; margin-top: 20px;"></div>
+            
             <div class="export-buttons" style="margin-top: 20px; display:none;">
-                <button id="exportImageBtn">导出图片</button>
-                <button id="exportExcelBtn">导出Excel</button>
+                <button id="exportImageBtn" style="background-color: #417690; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px;">导出图片</button>
+                <button id="exportExcelBtn" style="background-color: #28a745; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer;">导出Excel</button>
             </div>
         </div>
     </div>
@@ -224,7 +332,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const exportExcelBtn = document.getElementById('exportExcelBtn');
     const selectAllBrandsCheckbox = document.getElementById('selectAllBrands');
     const selectAllRegionsCheckbox = document.getElementById('selectAllRegions');
-    const brandCheckboxes = document.querySelectorAll('#brandCheckboxes input[name="brands"]');
+    const brandsSelect = document.getElementById('brands');
     let currentChart;
     
     // 检查jQuery和jQuery UI是否正确加载
@@ -234,10 +342,97 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 全选/取消全选品牌
     selectAllBrandsCheckbox.addEventListener('change', function() {
-        const checkboxes = document.querySelectorAll('#brandCheckboxes input[name="brands"]');
-        checkboxes.forEach(checkbox => {
-            checkbox.checked = selectAllBrandsCheckbox.checked;
+        Array.from(brandsSelect.options).forEach(option => {
+            option.selected = selectAllBrandsCheckbox.checked;
         });
+    });
+    
+    // 导出图片功能
+    exportImageBtn.addEventListener('click', function() {
+        if (currentChart) {
+            try {
+                // 创建一个临时链接并触发下载
+                const link = document.createElement('a');
+                // ECharts导出方法
+                if (typeof currentChart.getDataURL === 'function') {
+                    // ECharts实例
+                    link.href = currentChart.getDataURL({
+                        type: 'png',
+                        pixelRatio: 2,
+                        backgroundColor: '#fff'
+                    });
+                } else if (typeof currentChart.toBase64Image === 'function') {
+                    // Chart.js实例
+                    link.href = currentChart.toBase64Image();
+                } else {
+                    // 尝试从canvas获取
+                    const canvas = document.getElementById('analysisChart');
+                    if (canvas && canvas.toDataURL) {
+                        link.href = canvas.toDataURL('image/png');
+                    } else {
+                        throw new Error('图表实例不支持导出功能');
+                    }
+                }
+                link.download = (document.getElementById('analysisType').selectedOptions[0].text || 'analysis_chart') + '.png';
+                document.body.appendChild(link); // 添加到DOM以便在Firefox中工作
+                link.click();
+                document.body.removeChild(link); // 清理
+            } catch (error) {
+                console.error('导出图片失败:', error);
+                alert('导出图片失败: ' + error.message);
+            }
+        } else {
+            alert('请先生成图表再导出图片');
+        }
+    });
+    
+    // 导出Excel功能
+    exportExcelBtn.addEventListener('click', function() {
+        if (!currentChart || !currentChart.data) {
+            alert('请先生成图表后再导出');
+            return;
+        }
+        
+        // 创建工作簿
+        const wb = XLSX.utils.book_new();
+        
+        // 准备数据
+        const data = currentChart.data;
+        const exportData = [];
+        
+        // 根据图表类型准备不同的数据格式
+        if (data.datasets && data.datasets[0]) {
+            const dataset = data.datasets[0];
+            const analysisType = document.getElementById('analysisType').value;
+            
+            if (analysisType.startsWith('price_')) {
+                // 价格分析数据
+                exportData.push(['项目', '平均价格(万元)', '最低价格(万元)', '最高价格(万元)', '车辆数量']);
+                for (let i = 0; i < data.labels.length; i++) {
+                    exportData.push([
+                        data.labels[i],
+                        dataset.data[i],
+                        currentChart.chartData?.min_values?.[i] || '',
+                        currentChart.chartData?.max_values?.[i] || '',
+                        currentChart.chartData?.counts?.[i] || ''
+                    ]);
+                }
+            } else {
+                // 数量分析数据
+                exportData.push(['项目', '车辆数量']);
+                for (let i = 0; i < data.labels.length; i++) {
+                    exportData.push([data.labels[i], dataset.data[i]]);
+                }
+            }
+        }
+        
+        // 创建工作表
+        const ws = XLSX.utils.aoa_to_sheet(exportData);
+        XLSX.utils.book_append_sheet(wb, ws, '数据分析');
+        
+        // 导出文件
+        const fileName = '二手车数据分析_' + new Date().toISOString().slice(0, 10) + '.xlsx';
+        XLSX.writeFile(wb, fileName);
     });
 
     // 从后端获取地区数据
@@ -265,7 +460,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             console.log('获取到地区数据:', data);
             
-            if (data.regions && Array.isArray(data.regions)) {
+            if (data && data.regions && Array.isArray(data.regions)) {
                 // 添加地区选项
                 data.regions.forEach(region => {
                     if (region) { // 确保地区名不为空
@@ -297,7 +492,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 console.log('成功加载地区数据，共', data.regions.length, '个地区');
             } else {
-                console.error('地区数据格式不正确');
+                console.error('地区数据格式不正确或数据为空:', data);
                 const option = document.createElement('option');
                 option.value = '';
                 option.textContent = '-- 地区数据格式错误 --';
@@ -331,6 +526,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('loadingMessage').innerHTML = '<div style="text-align:center;">数据加载中，请稍候...</div>';
         document.getElementById('analysisChart').style.display = 'none';
         document.getElementById('dataSummary').style.display = 'none';
+        document.getElementById('dataTableContainer').style.display = 'none';
         document.querySelector('.export-buttons').style.display = 'none';
         
         const form = document.getElementById('analysisFilterForm');
@@ -344,18 +540,17 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('分析类型:', analysisTypeSelect.value);
         
         // 添加选中的品牌
-        const selectedBrands = [];
-        console.log('查找选中的品牌...');
-        document.querySelectorAll('input[name="brands"]:checked').forEach(checkbox => {
-            selectedBrands.push(checkbox.value);
-            params.append('brands', checkbox.value);
-            console.log('选中品牌:', checkbox.value);
-        });
+        const selectedBrands = Array.from(brandsSelect.selectedOptions);
         if (selectedBrands.length === 0) {
             alert('请至少选择一个品牌');
             document.getElementById('loadingMessage').innerHTML = '<div style="color:orange;text-align:center;">请至少选择一个品牌</div>';
             return;
         }
+        console.log('查找选中的品牌...');
+        selectedBrands.forEach(option => {
+            params.append('brands', option.value);
+            console.log('选中品牌:', option.value);
+        });
         console.log('选中品牌总数:', selectedBrands.length);
         
         // 添加选中的地区
@@ -418,11 +613,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 if (data && data.labels && data.values) {
                     console.log('开始渲染图表...');
+                    
+                    // 所有分析类型都使用统一的图表渲染方式
+                    console.log('渲染图表...');
+                    document.getElementById('analysisChart').style.display = 'block';
+                    document.getElementById('chinaMapChart').style.display = 'none';
                     renderChart(data);
+                    // 显示数据表格
+                    renderDataTable(data);
+                    
                     // 隐藏加载提示
                     document.getElementById('loadingMessage').style.display = 'none';
-                    // 显示图表和导出按钮
-                    document.getElementById('analysisChart').style.display = 'block';
                     document.querySelector('.export-buttons').style.display = 'block';
                 } else {
                     throw new Error('返回数据格式不正确，缺少必要的图表数据');
@@ -437,10 +638,51 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function renderChart(data) {
-        const ctx = document.getElementById('analysisChart').getContext('2d');
+        const analysisType = document.getElementById('analysisType').value;
+        
+        // renderChart函数现在只处理普通图表，地图渲染已移至fetchAnalysisData中处理
+        console.log('renderChart: 渲染普通图表，类型:', analysisType);
+        
+        // 完全销毁现有图表实例
         if (currentChart) {
-            currentChart.destroy();
+            try {
+                // 检查是Chart.js还是ECharts实例
+                if (typeof currentChart.destroy === 'function') {
+                    // Chart.js实例
+                    console.log('销毁Chart.js实例');
+                    currentChart.destroy();
+                } else if (typeof currentChart.dispose === 'function') {
+                    // ECharts实例
+                    console.log('销毁ECharts实例');
+                    currentChart.dispose();
+                }
+            } catch (error) {
+                console.warn('销毁图表实例时出错:', error);
+            }
+            currentChart = null;
         }
+        
+        // 获取Canvas元素并重置
+        const canvas = document.getElementById('analysisChart');
+        if (!canvas) {
+            console.error('找不到图表Canvas元素');
+            return;
+        }
+        
+        // 重置Canvas尺寸以清除Chart.js的内部状态
+        const parent = canvas.parentNode;
+        const newCanvas = canvas.cloneNode(true);
+        parent.removeChild(canvas);
+        parent.appendChild(newCanvas);
+        
+        // 获取新Canvas的上下文
+        const ctx = newCanvas.getContext('2d');
+        if (!ctx) {
+            console.error('无法获取Canvas上下文');
+            return;
+        }
+        
+        console.log('Canvas已重置，准备创建新图表');
         
         // 设置图表颜色
         let backgroundColor, borderColor;
@@ -469,13 +711,36 @@ document.addEventListener('DOMContentLoaded', function() {
                     data: data.values,
                     backgroundColor: backgroundColor,
                     borderColor: borderColor,
-                    borderWidth: 1,
+                    borderWidth: data.type === 'line' ? 3 : 1,
                     minBarLength: data.type === 'bar' ? 5 : undefined,
+                    fill: data.type === 'line' ? false : undefined,
+                    tension: data.type === 'line' ? 0.1 : undefined,
+                    pointBackgroundColor: data.type === 'line' ? borderColor : undefined,
+                    pointBorderColor: data.type === 'line' ? '#ffffff' : undefined,
+                    pointRadius: data.type === 'line' ? 6 : undefined,
+                    pointHoverRadius: data.type === 'line' ? 8 : undefined,
+                    pointBorderWidth: data.type === 'line' ? 2 : undefined,
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                animation: {
+                    duration: data.labels.length > 20 ? 400 : 800 /* 数据多时减少动画时间 */
+                },
+                elements: {
+                    point: {
+                        radius: data.type === 'line' ? 6 : (data.labels.length > 50 ? 2 : 3), /* 线图显示更大的点 */
+                        hoverRadius: data.type === 'line' ? 8 : 4,
+                        backgroundColor: data.type === 'line' ? borderColor : undefined,
+                        borderColor: data.type === 'line' ? '#ffffff' : undefined,
+                        borderWidth: data.type === 'line' ? 2 : 1
+                    }
+                },
+                interaction: {
+                    intersect: false, /* 优化交互性能 */
+                    mode: 'index'
+                },
                 scales: {
                     y: {
                         beginAtZero: true,
@@ -519,18 +784,455 @@ document.addEventListener('DOMContentLoaded', function() {
         
         currentChart = new Chart(ctx, chartConfig);
         
+        // 保存原始数据供导出使用
+        currentChart.chartData = data;
+        
         // 显示数据摘要
         if (data.summary) {
             const summaryDiv = document.getElementById('dataSummary');
             summaryDiv.style.display = 'block';
+            const validPriceCount = data.summary.valid_price_count || 0;
+            const totalCount = data.summary.total_count || 0;
+            const invalidCount = totalCount - validPriceCount;
+            
+            const dataCount = data.labels ? data.labels.length : 0;
+            let limitNote = '';
+            
             summaryDiv.innerHTML = `
                 <h4>数据摘要</h4>
-                <p>总数量: ${data.summary.total_count || 0} 辆</p>
+                <p>总数量: ${totalCount} 辆</p>
+                <p>有效价格数据: ${validPriceCount} 辆</p>
+                ${invalidCount > 0 ? `<p style="color: #666;">已跳过缺失价格数据: ${invalidCount} 辆</p>` : ''}
+                ${limitNote}
                 <p>平均价格: ${(data.summary.avg_price || 0).toFixed(2)} 万元</p>
                 <p>最低价格: ${(data.summary.min_price || 0).toFixed(2)} 万元</p>
                 <p>最高价格: ${(data.summary.max_price || 0).toFixed(2)} 万元</p>
             `;
         }
+        
+        // 地区数据表格将由fetchAnalysisData统一调用renderDataTable显示
+    }
+    
+    // 渲染数据表格函数
+    function renderDataTable(data) {
+        const tableContainer = document.getElementById('dataTableContainer');
+        const tableHeader = document.getElementById('tableHeader');
+        const tableBody = document.getElementById('tableBody');
+        
+        // 清空表格内容
+        tableHeader.innerHTML = '';
+        tableBody.innerHTML = '';
+        
+        if (!data.labels || !data.values || data.labels.length === 0) {
+            tableContainer.style.display = 'none';
+            return;
+        }
+        
+        // 根据分析类型确定表头
+        const analysisType = document.getElementById('analysisType').value;
+        let headers = [];
+        
+        if (analysisType.includes('price_by')) {
+            if (analysisType === 'price_by_brand') {
+                headers = ['品牌', '平均价格(万元)', '最低价格(万元)', '最高价格(万元)', '车辆数量'];
+            } else if (analysisType === 'price_by_region') {
+                headers = ['地区', '平均价格(万元)', '最低价格(万元)', '最高价格(万元)', '车辆数量'];
+            } else if (analysisType === 'price_by_year') {
+                headers = ['年份', '平均价格(万元)', '最低价格(万元)', '最高价格(万元)', '车辆数量'];
+            } else if (analysisType === 'price_by_mileage') {
+                headers = ['里程范围', '平均价格(万元)', '最低价格(万元)', '最高价格(万元)', '车辆数量'];
+            }
+        } else if (analysisType.includes('count_by')) {
+            if (analysisType === 'count_by_brand') {
+                headers = ['品牌', '车辆数量'];
+            } else if (analysisType === 'count_by_region') {
+                headers = ['地区', '车辆数量'];
+            } else if (analysisType === 'count_by_fuel') {
+                headers = ['燃料类型', '车辆数量'];
+            } else if (analysisType === 'count_by_transmission') {
+                headers = ['变速箱类型', '车辆数量'];
+            } else if (analysisType === 'count_by_color') {
+                headers = ['颜色', '车辆数量'];
+            }
+        } else if (analysisType.includes('region')) {
+            // 地区分析的表头
+            headers = ['地区', '数量'];
+        }
+        
+        // 创建表头
+        const headerRow = document.createElement('tr');
+        headers.forEach(header => {
+            const th = document.createElement('th');
+            th.textContent = header;
+            headerRow.appendChild(th);
+        });
+        tableHeader.appendChild(headerRow);
+        
+        // 创建表格数据
+        for (let i = 0; i < data.labels.length; i++) {
+            const row = document.createElement('tr');
+            
+            // 第一列：标签（品牌、地区等）
+            const labelCell = document.createElement('td');
+            labelCell.textContent = data.labels[i];
+            row.appendChild(labelCell);
+            
+            if (analysisType.includes('price_by')) {
+                // 价格分析：显示平均、最低、最高价格和数量
+                const avgCell = document.createElement('td');
+                avgCell.textContent = data.values[i].toFixed(2);
+                row.appendChild(avgCell);
+                
+                // 如果有详细数据，显示最低和最高价格
+                if (data.detailed_data && data.detailed_data[i]) {
+                    const minCell = document.createElement('td');
+                    minCell.textContent = data.detailed_data[i].min_price ? data.detailed_data[i].min_price.toFixed(2) : '-';
+                    row.appendChild(minCell);
+                    
+                    const maxCell = document.createElement('td');
+                    maxCell.textContent = data.detailed_data[i].max_price ? data.detailed_data[i].max_price.toFixed(2) : '-';
+                    row.appendChild(maxCell);
+                    
+                    const countCell = document.createElement('td');
+                    countCell.textContent = data.detailed_data[i].car_count || '-';
+                    row.appendChild(countCell);
+                } else {
+                    // 如果没有详细数据，填充空列
+                    for (let j = 0; j < 3; j++) {
+                        const emptyCell = document.createElement('td');
+                        emptyCell.textContent = '-';
+                        row.appendChild(emptyCell);
+                    }
+                }
+            } else {
+                // 数量分析或地区分析：只显示数量
+                const countCell = document.createElement('td');
+                countCell.textContent = data.values[i];
+                row.appendChild(countCell);
+            }
+            
+            tableBody.appendChild(row);
+        }
+        
+        // 显示表格
+        tableContainer.style.display = 'block';
+    }
+    
+    function renderChinaMap(data) {
+        console.log('开始渲染地区分析图表...');
+        
+        // 完全销毁现有图表实例
+        if (currentChart) {
+            try {
+                if (typeof currentChart.destroy === 'function') {
+                    console.log('销毁Chart.js实例');
+                    currentChart.destroy();
+                } else if (typeof currentChart.dispose === 'function') {
+                    console.log('销毁ECharts实例');
+                    currentChart.dispose();
+                }
+            } catch (error) {
+                console.warn('销毁图表实例时出错:', error);
+            }
+            currentChart = null;
+        }
+        
+        // 获取图表容器
+        const container = document.getElementById('chinaMapChart');
+        if (!container) {
+            console.error('图表容器未找到');
+            document.getElementById('loadingMessage').innerHTML = '<div style="color:red;text-align:center;">图表容器未找到</div>';
+            return;
+        }
+        
+        // 检查数据有效性
+        console.log('接收到的地区数据:', data);
+        if (!data || !data.labels || !data.values) {
+            console.error('地区数据无效:', data);
+            document.getElementById('loadingMessage').innerHTML = '<div style="color:red;text-align:center;">地区数据格式错误</div>';
+            return;
+        }
+        
+        // 检查ECharts是否可用
+        if (typeof echarts === 'undefined') {
+            console.error('ECharts未加载');
+            document.getElementById('loadingMessage').innerHTML = '<div style="color:red;text-align:center;">ECharts库未加载，无法显示地图</div>';
+            return;
+        }
+        
+        // 检查中国地图数据是否加载
+        if (!echarts.getMap || !echarts.getMap('china')) {
+            console.error('中国地图数据未加载');
+            document.getElementById('loadingMessage').innerHTML = '<div style="color:red;text-align:center;">中国地图数据未加载，正在重新加载...</div>';
+            // 尝试重新加载地图数据
+            loadChinaMap().then(() => {
+                console.log('地图数据重新加载成功，重新渲染地图');
+                renderChinaMap(data);
+            }).catch(error => {
+                console.error('地图数据重新加载失败:', error);
+                document.getElementById('loadingMessage').innerHTML = '<div style="color:red;text-align:center;">地图数据加载失败: ' + error.message + '</div>';
+            });
+            return;
+        }
+        
+        // 清空容器
+        container.innerHTML = '';
+        
+        // 创建ECharts实例
+        currentChart = echarts.init(container);
+        
+        // 城市到省份的映射
+        const cityToProvince = {
+            '北京': '北京', '天津': '天津', '上海': '上海', '重庆': '重庆',
+            '石家庄': '河北', '唐山': '河北', '秦皇岛': '河北', '邯郸': '河北', '邢台': '河北', '保定': '河北', '张家口': '河北', '承德': '河北', '沧州': '河北', '廊坊': '河北', '衡水': '河北',
+            '太原': '山西', '大同': '山西', '阳泉': '山西', '长治': '山西', '晋城': '山西', '朔州': '山西', '晋中': '山西', '运城': '山西', '忻州': '山西', '临汾': '山西', '吕梁': '山西',
+            '呼和浩特': '内蒙古', '包头': '内蒙古', '乌海': '内蒙古', '赤峰': '内蒙古', '通辽': '内蒙古', '鄂尔多斯': '内蒙古', '呼伦贝尔': '内蒙古', '巴彦淖尔': '内蒙古', '乌兰察布': '内蒙古', '兴安盟': '内蒙古', '锡林郭勒盟': '内蒙古', '阿拉善盟': '内蒙古',
+            '沈阳': '辽宁', '大连': '辽宁', '鞍山': '辽宁', '抚顺': '辽宁', '本溪': '辽宁', '丹东': '辽宁', '锦州': '辽宁', '营口': '辽宁', '阜新': '辽宁', '辽阳': '辽宁', '盘锦': '辽宁', '铁岭': '辽宁', '朝阳': '辽宁', '葫芦岛': '辽宁',
+            '长春': '吉林', '吉林': '吉林', '四平': '吉林', '辽源': '吉林', '通化': '吉林', '白山': '吉林', '松原': '吉林', '白城': '吉林', '延边': '吉林',
+            '哈尔滨': '黑龙江', '齐齐哈尔': '黑龙江', '鸡西': '黑龙江', '鹤岗': '黑龙江', '双鸭山': '黑龙江', '大庆': '黑龙江', '伊春': '黑龙江', '佳木斯': '黑龙江', '七台河': '黑龙江', '牡丹江': '黑龙江', '黑河': '黑龙江', '绥化': '黑龙江', '大兴安岭': '黑龙江',
+            '南京': '江苏', '无锡': '江苏', '徐州': '江苏', '常州': '江苏', '苏州': '江苏', '南通': '江苏', '连云港': '江苏', '淮安': '江苏', '盐城': '江苏', '扬州': '江苏', '镇江': '江苏', '泰州': '江苏', '宿迁': '江苏',
+            '杭州': '浙江', '宁波': '浙江', '温州': '浙江', '嘉兴': '浙江', '湖州': '浙江', '绍兴': '浙江', '金华': '浙江', '衢州': '浙江', '舟山': '浙江', '台州': '浙江', '丽水': '浙江',
+            '合肥': '安徽', '芜湖': '安徽', '蚌埠': '安徽', '淮南': '安徽', '马鞍山': '安徽', '淮北': '安徽', '铜陵': '安徽', '安庆': '安徽', '黄山': '安徽', '滁州': '安徽', '阜阳': '安徽', '宿州': '安徽', '六安': '安徽', '亳州': '安徽', '池州': '安徽', '宣城': '安徽',
+            '福州': '福建', '厦门': '福建', '莆田': '福建', '三明': '福建', '泉州': '福建', '漳州': '福建', '南平': '福建', '龙岩': '福建', '宁德': '福建',
+            '南昌': '江西', '景德镇': '江西', '萍乡': '江西', '九江': '江西', '新余': '江西', '鹰潭': '江西', '赣州': '江西', '吉安': '江西', '宜春': '江西', '抚州': '江西', '上饶': '江西',
+            '济南': '山东', '青岛': '山东', '淄博': '山东', '枣庄': '山东', '东营': '山东', '烟台': '山东', '潍坊': '山东', '济宁': '山东', '泰安': '山东', '威海': '山东', '日照': '山东', '临沂': '山东', '德州': '山东', '聊城': '山东', '滨州': '山东', '菏泽': '山东',
+            '郑州': '河南', '开封': '河南', '洛阳': '河南', '平顶山': '河南', '安阳': '河南', '鹤壁': '河南', '新乡': '河南', '焦作': '河南', '濮阳': '河南', '许昌': '河南', '漯河': '河南', '三门峡': '河南', '南阳': '河南', '商丘': '河南', '信阳': '河南', '周口': '河南', '驻马店': '河南', '济源': '河南',
+            '武汉': '湖北', '黄石': '湖北', '十堰': '湖北', '宜昌': '湖北', '襄阳': '湖北', '鄂州': '湖北', '荆门': '湖北', '孝感': '湖北', '荆州': '湖北', '黄冈': '湖北', '咸宁': '湖北', '随州': '湖北', '恩施': '湖北', '仙桃': '湖北', '潜江': '湖北', '天门': '湖北', '神农架': '湖北',
+            '长沙': '湖南', '株洲': '湖南', '湘潭': '湖南', '衡阳': '湖南', '邵阳': '湖南', '岳阳': '湖南', '常德': '湖南', '张家界': '湖南', '益阳': '湖南', '郴州': '湖南', '永州': '湖南', '怀化': '湖南', '娄底': '湖南', '湘西': '湖南',
+            '广州': '广东', '韶关': '广东', '深圳': '广东', '珠海': '广东', '汕头': '广东', '佛山': '广东', '江门': '广东', '湛江': '广东', '茂名': '广东', '肇庆': '广东', '惠州': '广东', '梅州': '广东', '汕尾': '广东', '河源': '广东', '阳江': '广东', '清远': '广东', '东莞': '广东', '中山': '广东', '潮州': '广东', '揭阳': '广东', '云浮': '广东',
+            '南宁': '广西', '柳州': '广西', '桂林': '广西', '梧州': '广西', '北海': '广西', '防城港': '广西', '钦州': '广西', '贵港': '广西', '玉林': '广西', '百色': '广西', '贺州': '广西', '河池': '广西', '来宾': '广西', '崇左': '广西',
+            '海口': '海南', '三亚': '海南', '三沙': '海南', '儋州': '海南',
+            '成都': '四川', '自贡': '四川', '攀枝花': '四川', '泸州': '四川', '德阳': '四川', '绵阳': '四川', '广元': '四川', '遂宁': '四川', '内江': '四川', '乐山': '四川', '南充': '四川', '眉山': '四川', '宜宾': '四川', '广安': '四川', '达州': '四川', '雅安': '四川', '巴中': '四川', '资阳': '四川', '阿坝': '四川', '甘孜': '四川', '凉山': '四川',
+            '贵阳': '贵州', '六盘水': '贵州', '遵义': '贵州', '安顺': '贵州', '毕节': '贵州', '铜仁': '贵州', '黔西南': '贵州', '黔东南': '贵州', '黔南': '贵州',
+            '昆明': '云南', '曲靖': '云南', '玉溪': '云南', '保山': '云南', '昭通': '云南', '丽江': '云南', '普洱': '云南', '临沧': '云南', '楚雄': '云南', '红河': '云南', '文山': '云南', '西双版纳': '云南', '大理': '云南', '德宏': '云南', '怒江': '云南', '迪庆': '云南',
+            '拉萨': '西藏', '日喀则': '西藏', '昌都': '西藏', '林芝': '西藏', '山南': '西藏', '那曲': '西藏', '阿里': '西藏',
+            '西安': '陕西', '铜川': '陕西', '宝鸡': '陕西', '咸阳': '陕西', '渭南': '陕西', '延安': '陕西', '汉中': '陕西', '榆林': '陕西', '安康': '陕西', '商洛': '陕西',
+            '兰州': '甘肃', '嘉峪关': '甘肃', '金昌': '甘肃', '白银': '甘肃', '天水': '甘肃', '武威': '甘肃', '张掖': '甘肃', '平凉': '甘肃', '酒泉': '甘肃', '庆阳': '甘肃', '定西': '甘肃', '陇南': '甘肃', '临夏': '甘肃', '甘南': '甘肃',
+            '西宁': '青海', '海东': '青海', '海北': '青海', '黄南': '青海', '海南': '青海', '果洛': '青海', '玉树': '青海', '海西': '青海',
+            '银川': '宁夏', '石嘴山': '宁夏', '吴忠': '宁夏', '固原': '宁夏', '中卫': '宁夏',
+            '乌鲁木齐': '新疆', '克拉玛依': '新疆', '吐鲁番': '新疆', '哈密': '新疆', '昌吉': '新疆', '博尔塔拉': '新疆', '巴音郭楞': '新疆', '阿克苏': '新疆', '克孜勒苏': '新疆', '喀什': '新疆', '和田': '新疆', '伊犁': '新疆', '塔城': '新疆', '阿勒泰': '新疆',
+            '香港': '香港', '澳门': '澳门', '台北': '台湾', '高雄': '台湾', '台中': '台湾', '台南': '台湾'
+        };
+        
+        // 聚合城市数据到省份
+        const provinceData = {};
+        for (let i = 0; i < data.labels.length; i++) {
+            const city = data.labels[i];
+            const value = data.values[i];
+            const province = cityToProvince[city] || city; // 如果找不到映射，使用原名
+            
+            if (provinceData[province]) {
+                provinceData[province] += value;
+            } else {
+                provinceData[province] = value;
+            }
+        }
+        
+        // 转换为ECharts需要的格式
+        const mapData = Object.keys(provinceData).map(province => ({
+            name: province,
+            value: provinceData[province]
+        }));
+        
+        console.log('省份聚合数据:', mapData);
+        
+        // 配置ECharts地图选项
+        const option = {
+            title: {
+                text: '二手车地区分布热力图',
+                left: 'center',
+                textStyle: {
+                    fontSize: 18,
+                    fontWeight: 'bold'
+                }
+            },
+            tooltip: {
+                trigger: 'item',
+                formatter: function(params) {
+                    if (params.data) {
+                        return params.name + '<br/>车辆数量: ' + params.data.value + ' 辆';
+                    }
+                    return params.name + '<br/>暂无数据';
+                }
+            },
+            visualMap: {
+                min: 0,
+                max: Math.max(...mapData.map(item => item.value)),
+                left: 'left',
+                top: 'bottom',
+                text: ['高', '低'],
+                calculable: true,
+                inRange: {
+                    color: ['#e0f3ff', '#006edd']
+                }
+            },
+            series: [{
+                name: '二手车数量',
+                type: 'map',
+                map: 'china',
+                roam: true,
+                emphasis: {
+                    label: {
+                        show: true
+                    }
+                },
+                data: mapData
+            }]
+        };
+        
+        console.log('开始创建ECharts地图...');
+        try {
+            // 设置图表选项
+            currentChart.setOption(option);
+            console.log('地区分析地图渲染成功，currentChart已设置:', !!currentChart);
+            
+            // 保存原始数据供导出使用
+            currentChart.chartData = data;
+            
+            // 为导出功能设置getDataURL方法
+            currentChart.getDataURL = function() {
+                return currentChart.getDataURL({
+                    type: 'png',
+                    pixelRatio: 2,
+                    backgroundColor: '#fff'
+                });
+            };
+            
+            // 隐藏加载提示
+            document.getElementById('loadingMessage').style.display = 'none';
+            
+            // 确保导出按钮可见
+            document.querySelector('.export-buttons').style.display = 'block';
+            console.log('地区分析地图渲染完成，导出按钮已显示');
+            
+        } catch (error) {
+            console.error('地图渲染失败:', error);
+            document.getElementById('loadingMessage').innerHTML = '<div style="color:red;text-align:center;">地图渲染失败: ' + error.message + '</div>';
+        }
+        
+        // 显示数据摘要（如果有）
+        if (data.summary) {
+            const summaryDiv = document.getElementById('dataSummary');
+            summaryDiv.style.display = 'block';
+            const validCount = data.summary.valid_count || data.values.reduce((a, b) => a + b, 0);
+            const totalCount = data.summary.total_count || validCount;
+            
+            summaryDiv.innerHTML = `
+                <h4>地区分析摘要</h4>
+                <p>总数量: ${totalCount} 辆</p>
+                <p>涉及地区: ${data.labels.length} 个</p>
+                <p>最多地区: ${data.labels[data.values.indexOf(Math.max(...data.values))]} (${Math.max(...data.values)} 辆)</p>
+                <p>最少地区: ${data.labels[data.values.indexOf(Math.min(...data.values))]} (${Math.min(...data.values)} 辆)</p>
+            `;
+        }
+        
+        // 地区数据表格将由fetchAnalysisData统一调用renderDataTable显示
+    }
+    
+    // renderRegionDataTable函数已删除，现在使用统一的renderDataTable函数
+    
+    function renderDataTable(data) {
+        const tableContainer = document.getElementById('dataTableContainer');
+        const tableHeader = document.getElementById('tableHeader');
+        const tableBody = document.getElementById('tableBody');
+        
+        // 清空表格内容
+        tableHeader.innerHTML = '';
+        tableBody.innerHTML = '';
+        
+        if (!data.labels || !data.values || data.labels.length === 0) {
+            tableContainer.style.display = 'none';
+            return;
+        }
+        
+        // 根据分析类型确定表头
+        const analysisType = document.getElementById('analysisType').value;
+        let headers = [];
+        
+        if (analysisType.includes('price_by')) {
+            if (analysisType === 'price_by_brand') {
+                headers = ['品牌', '平均价格(万元)', '最低价格(万元)', '最高价格(万元)', '车辆数量'];
+            } else if (analysisType === 'price_by_region') {
+                headers = ['地区', '平均价格(万元)', '最低价格(万元)', '最高价格(万元)', '车辆数量'];
+            } else if (analysisType === 'price_by_year') {
+                headers = ['年份', '平均价格(万元)', '最低价格(万元)', '最高价格(万元)', '车辆数量'];
+            } else if (analysisType === 'price_by_mileage') {
+                headers = ['里程范围', '平均价格(万元)', '最低价格(万元)', '最高价格(万元)', '车辆数量'];
+            }
+        } else if (analysisType.includes('count_by')) {
+            if (analysisType === 'count_by_brand') {
+                headers = ['品牌', '车辆数量'];
+            } else if (analysisType === 'count_by_region') {
+                headers = ['地区', '车辆数量'];
+            } else if (analysisType === 'count_by_fuel') {
+                headers = ['燃料类型', '车辆数量'];
+            } else if (analysisType === 'count_by_transmission') {
+                headers = ['变速箱类型', '车辆数量'];
+            } else if (analysisType === 'count_by_color') {
+                headers = ['颜色', '车辆数量'];
+            }
+        } else if (analysisType.includes('region')) {
+            // 地区分析的表头
+            headers = ['地区', '数量'];
+        }
+        
+        // 创建表头
+        const headerRow = document.createElement('tr');
+        headers.forEach(header => {
+            const th = document.createElement('th');
+            th.textContent = header;
+            headerRow.appendChild(th);
+        });
+        tableHeader.appendChild(headerRow);
+        
+        // 创建表格数据
+        for (let i = 0; i < data.labels.length; i++) {
+            const row = document.createElement('tr');
+            
+            // 第一列：标签（品牌、地区等）
+            const labelCell = document.createElement('td');
+            labelCell.textContent = data.labels[i];
+            row.appendChild(labelCell);
+            
+            if (analysisType.includes('price_by')) {
+                // 价格分析：显示平均、最低、最高价格和数量
+                const avgCell = document.createElement('td');
+                avgCell.textContent = data.values[i].toFixed(2);
+                row.appendChild(avgCell);
+                
+                // 如果有详细数据，显示最低和最高价格
+                if (data.detailed_data && data.detailed_data[i]) {
+                    const minCell = document.createElement('td');
+                    minCell.textContent = data.detailed_data[i].min_price ? data.detailed_data[i].min_price.toFixed(2) : '-';
+                    row.appendChild(minCell);
+                    
+                    const maxCell = document.createElement('td');
+                    maxCell.textContent = data.detailed_data[i].max_price ? data.detailed_data[i].max_price.toFixed(2) : '-';
+                    row.appendChild(maxCell);
+                    
+                    const countCell = document.createElement('td');
+                    countCell.textContent = data.detailed_data[i].car_count || '-';
+                    row.appendChild(countCell);
+                } else {
+                    // 如果没有详细数据，填充空列
+                    for (let j = 0; j < 3; j++) {
+                        const emptyCell = document.createElement('td');
+                        emptyCell.textContent = '-';
+                        row.appendChild(emptyCell);
+                    }
+                }
+            } else {
+                // 数量分析或地区分析：只显示数量
+                const countCell = document.createElement('td');
+                countCell.textContent = data.values[i];
+                row.appendChild(countCell);
+            }
+            
+            tableBody.appendChild(row);
+        }
+        
+        // 显示表格
+        tableContainer.style.display = 'block';
     }
 
     // 应用分析按钮点击事件
@@ -550,7 +1252,20 @@ document.addEventListener('DOMContentLoaded', function() {
             try {
                 // 创建一个临时链接并触发下载
                 const link = document.createElement('a');
-                link.href = currentChart.toBase64Image();
+                // ECharts导出方法
+                if (typeof currentChart.getDataURL === 'function') {
+                    // ECharts实例
+                    link.href = currentChart.getDataURL({
+                        type: 'png',
+                        pixelRatio: 2,
+                        backgroundColor: '#fff'
+                    });
+                } else if (typeof currentChart.toBase64Image === 'function') {
+                    // Chart.js实例
+                    link.href = currentChart.toBase64Image();
+                } else {
+                    throw new Error('图表实例不支持导出功能');
+                }
                 link.download = (document.getElementById('analysisType').selectedOptions[0].text || 'analysis_chart') + '.png';
                 document.body.appendChild(link); // 添加到DOM以便在Firefox中工作
                 link.click();

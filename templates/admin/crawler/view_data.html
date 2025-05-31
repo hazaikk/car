@@ -1,0 +1,151 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+&rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+&rsaquo; <a href="{% url 'admin:crawler_crawlertask_changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+&rsaquo; {{ title }}
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <div class="module">
+        <h2>{{ title }}</h2>
+        
+        <div class="results">
+            <div class="info">
+                <p><strong>任务信息：</strong></p>
+                <ul>
+                    <li>任务名称：{{ task.name }}</li>
+                    <li>目标数量：{{ task.target_count }}</li>
+                    <li>实际爬取：{{ task.actual_count }}</li>
+                    <li>任务状态：{{ task.get_status_display }}</li>
+                    <li>创建时间：{{ task.created_at|date:"Y-m-d H:i:s" }}</li>
+                    {% if task.start_time %}<li>开始时间：{{ task.start_time|date:"Y-m-d H:i:s" }}</li>{% endif %}
+                    {% if task.end_time %}<li>结束时间：{{ task.end_time|date:"Y-m-d H:i:s" }}</li>{% endif %}
+                </ul>
+            </div>
+            
+            {% if total_count > 0 %}
+            <div class="actions">
+                <p><strong>数据操作：</strong></p>
+                <a href="{% url 'admin:crawler_crawlertask_export' task.id %}" class="button" style="background-color: #6c757d; color: white; padding: 8px 15px; text-decoration: none; border-radius: 3px; margin-right: 10px;">导出全部数据到Excel</a>
+                <a href="{% url 'admin:crawler_crawlertask_import' task.id %}" class="button" style="background-color: #007bff; color: white; padding: 8px 15px; text-decoration: none; border-radius: 3px; margin-right: 10px;" onclick="return confirm('确定要将这些数据导入到数据库吗？');">导入数据到数据库</a>
+                <a href="{% url 'admin:crawler_usedcar_changelist' %}" class="button" style="background-color: #17a2b8; color: white; padding: 8px 15px; text-decoration: none; border-radius: 3px;">查看二手车数据</a>
+            </div>
+            
+            <div class="data-summary">
+                <p><strong>数据概览：</strong>共 {{ total_count }} 条数据{% if total_count > 100 %}（下方仅显示前100条）{% endif %}</p>
+            </div>
+            
+            <div class="data-table" style="overflow-x: auto; margin-top: 20px;">
+                <table class="table" style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background-color: #f8f9fa;">
+                            <th style="border: 1px solid #dee2e6; padding: 8px; text-align: left;">序号</th>
+                            <th style="border: 1px solid #dee2e6; padding: 8px; text-align: left;">车辆名称</th>
+                            <th style="border: 1px solid #dee2e6; padding: 8px; text-align: left;">价格</th>
+                            <th style="border: 1px solid #dee2e6; padding: 8px; text-align: left;">年份</th>
+                            <th style="border: 1px solid #dee2e6; padding: 8px; text-align: left;">里程</th>
+                            <th style="border: 1px solid #dee2e6; padding: 8px; text-align: left;">排量</th>
+                            <th style="border: 1px solid #dee2e6; padding: 8px; text-align: left;">变速箱</th>
+                            <th style="border: 1px solid #dee2e6; padding: 8px; text-align: left;">所在地</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in data %}
+                        <tr>
+                            <td style="border: 1px solid #dee2e6; padding: 8px;">{{ forloop.counter }}</td>
+                            <td style="border: 1px solid #dee2e6; padding: 8px;">{{ item.车辆名称|default:"-" }}</td>
+                            <td style="border: 1px solid #dee2e6; padding: 8px; color: #dc3545; font-weight: bold;">{{ item.价格|default:"-" }}</td>
+                            <td style="border: 1px solid #dee2e6; padding: 8px;">{{ item.年份|default:"-" }}</td>
+                            <td style="border: 1px solid #dee2e6; padding: 8px;">{{ item.里程|default:"-" }}</td>
+                            <td style="border: 1px solid #dee2e6; padding: 8px;">{{ item.排量|default:"-" }}</td>
+                            <td style="border: 1px solid #dee2e6; padding: 8px;">{{ item.变速箱|default:"-" }}</td>
+                            <td style="border: 1px solid #dee2e6; padding: 8px;">{{ item.所在地|default:"-" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" style="border: 1px solid #dee2e6; padding: 20px; text-align: center; color: #6c757d;">暂无数据</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            {% if total_count > 100 %}
+            <div class="pagination-info" style="margin-top: 15px; padding: 10px; background-color: #e9ecef; border-radius: 3px;">
+                <p style="margin: 0; color: #495057;">📊 为了页面加载性能，此处仅显示前100条数据。要查看全部 {{ total_count }} 条数据，请点击上方的"导出全部数据到Excel"按钮。</p>
+            </div>
+            {% endif %}
+            
+            {% else %}
+            <div class="no-data" style="text-align: center; padding: 40px; color: #6c757d;">
+                <p>暂无爬取数据</p>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="submit-row">
+            <a href="{% url 'admin:crawler_crawlertask_changelist' %}" class="button cancel-link">返回任务列表</a>
+        </div>
+    </div>
+</div>
+
+<style>
+.info {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+}
+
+.info ul {
+    margin: 10px 0 0 0;
+    padding-left: 20px;
+}
+
+.info li {
+    margin-bottom: 5px;
+}
+
+.actions {
+    background-color: #e9ecef;
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+}
+
+.data-summary {
+    background-color: #d1ecf1;
+    padding: 10px 15px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    border-left: 4px solid #bee5eb;
+}
+
+.data-table {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.table th {
+    font-weight: 600;
+    color: #495057;
+}
+
+.table tbody tr:nth-child(even) {
+    background-color: #f8f9fa;
+}
+
+.table tbody tr:hover {
+    background-color: #e9ecef;
+}
+</style>
+{% endblock %}

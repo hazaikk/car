@@ -48,17 +48,20 @@ class Command(BaseCommand):
             return None
 
     def parse_mileage(self, mileage_str):
-        """解析里程数"""
+        """解析里程数，返回万公里为单位的数值"""
         if not mileage_str or pd.isna(mileage_str):
             return None
             
         try:
-            # 处理"6.7万公里"格式
+            # 处理"6.7万公里"格式，直接提取数值（已经是万公里单位）
             if '万公里' in str(mileage_str):
-                value = float(str(mileage_str).replace('万公里', '')) * 10000
+                value = float(str(mileage_str).replace('万公里', ''))
                 return Decimal(str(value))
-            # 处理数字格式
-            return Decimal(str(mileage_str))
+            # 处理纯数字格式，假设是公里，转换为万公里
+            elif str(mileage_str).replace('.', '').isdigit():
+                value = float(str(mileage_str)) / 10000
+                return Decimal(str(value))
+            return None
         except:
             return None
 
@@ -159,11 +162,16 @@ class Command(BaseCommand):
                                 parsed_mileage = self.parse_mileage(value)
                                 if parsed_mileage is not None:
                                     car_data[model_field] = parsed_mileage
+                                    car_data['mileage_text'] = str(value)  # 保存原始文本
                             
                             elif model_field in ['registration_date', 'inspection_due_date', 'insurance_due_date']:
                                 parsed_date = self.parse_date(str(value))
                                 if parsed_date:
                                     car_data[model_field] = parsed_date
+                                    # 如果是上牌时间，同时设置registration_date字段
+                                    if model_field == 'registration_date':
+                                        car_data['registration_date'] = parsed_date
+                                        car_data['first_registration'] = str(value)  # 保存原始文本
                             
                             elif model_field == 'publish_date':
                                 try:
@@ -310,4 +318,4 @@ class Command(BaseCommand):
             ))
 
         except Exception as e:
-            self.stdout.write(self.style.ERROR(f'Error reading Excel file: {str(e)}')) 
+            self.stdout.write(self.style.ERROR(f'Error reading Excel file: {str(e)}'))

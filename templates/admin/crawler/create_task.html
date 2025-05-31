@@ -1,0 +1,146 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_modify %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+&rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+&rsaquo; <a href="{% url 'admin:crawler_crawlertask_changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+&rsaquo; {{ title }}
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <form method="post" id="crawler-task-form">
+        {% csrf_token %}
+        <div>
+            <fieldset class="module aligned">
+                <h2>创建新的爬虫任务</h2>
+                
+                <div class="form-row">
+                    <div>
+                        <label for="id_name" class="required">任务名称:</label>
+                        <input type="text" name="name" id="id_name" class="vTextField" maxlength="200" required>
+                        <div class="help">为这个爬虫任务起一个描述性的名称</div>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div>
+                        <label for="id_target_count" class="required">目标爬取数量:</label>
+                        <input type="number" name="target_count" id="id_target_count" class="vIntegerField" value="100" min="1" max="10000" required>
+                        <div class="help">设置要爬取的二手车数据数量（建议不超过1000条以避免被网站限制）</div>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div>
+                        <label for="id_start_page" class="required">起始页码:</label>
+                        <input type="number" name="start_page" id="id_start_page" class="vIntegerField" value="1" min="1" max="1000" required>
+                        <div class="help">设置爬虫开始的页码（默认从第1页开始）</div>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div>
+                        <label for="id_end_page">终止页码:</label>
+                        <input type="number" name="end_page" id="id_end_page" class="vIntegerField" value="" min="1" max="1000">
+                        <div class="help">设置爬虫结束的页码（留空则根据目标数量自动确定）</div>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div>
+                        <label for="id_delay_seconds">爬取间隔(秒):</label>
+                        <input type="number" name="delay_seconds" id="id_delay_seconds" class="vIntegerField" value="2" min="1" max="10" step="0.5">
+                        <div class="help">设置每次请求之间的延迟时间，避免被网站限制（建议2-5秒）</div>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div>
+                        <label for="id_search_keyword">搜索关键词:</label>
+                        <input type="text" name="search_keyword" id="id_search_keyword" class="vTextField" maxlength="100">
+                        <div class="help">可选：设置搜索关键词来筛选特定车型（如"奔驰"、"宝马"等）</div>
+                    </div>
+                </div>
+            </fieldset>
+            
+            <div class="submit-row">
+                <input type="submit" value="创建任务" class="default" name="_save">
+                <a href="{% url 'admin:crawler_crawlertask_changelist' %}" class="button cancel-link">取消</a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+(function($) {
+    $(document).ready(function() {
+        // 表单验证
+        $('#crawler-task-form').on('submit', function(e) {
+            var name = $('#id_name').val().trim();
+            var targetCount = parseInt($('#id_target_count').val());
+            var startPage = parseInt($('#id_start_page').val());
+            var endPage = $('#id_end_page').val() ? parseInt($('#id_end_page').val()) : null;
+            var delaySeconds = parseFloat($('#id_delay_seconds').val());
+            
+            if (!name) {
+                alert('请输入任务名称');
+                e.preventDefault();
+                return false;
+            }
+            
+            if (!targetCount || targetCount < 1) {
+                alert('请输入有效的目标爬取数量（至少1条）');
+                e.preventDefault();
+                return false;
+            }
+            
+            if (!startPage || startPage < 1) {
+                alert('请输入有效的起始页码（至少1页）');
+                e.preventDefault();
+                return false;
+            }
+            
+            if (endPage && endPage < startPage) {
+                alert('终止页码不能小于起始页码');
+                e.preventDefault();
+                return false;
+            }
+            
+            if (!delaySeconds || delaySeconds < 1) {
+                alert('请输入有效的爬取间隔（至少1秒）');
+                e.preventDefault();
+                return false;
+            }
+            
+            if (targetCount > 10000) {
+                if (!confirm('爬取数量较大，可能需要较长时间完成，确定要继续吗？')) {
+                    e.preventDefault();
+                    return false;
+                }
+            }
+            
+            // 显示加载提示
+            $('input[type="submit"]').val('正在创建...').prop('disabled', true);
+        });
+        
+        // 数量输入建议
+        $('#id_target_count').on('input', function() {
+            var value = parseInt($(this).val());
+            var helpText = $('.help');
+            
+            if (value > 1000) {
+                helpText.last().html('设置要爬取的二手车数据数量（<span style="color: orange;">注意：数量较大可能需要较长时间</span>）');
+            } else {
+                helpText.last().html('设置要爬取的二手车数据数量（建议不超过1000条以避免被网站限制）');
+            }
+        });
+    });
+})(django.jQuery);
+</script>
+{% endblock %}

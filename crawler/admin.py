@@ -1,27 +1,103 @@
 from django.contrib import admin
-from django.http import JsonResponse
-from django.db.models import Avg, Count, Min, Max, Sum
+from django.http import JsonResponse, HttpResponse
 from django.urls import path
-from django.template.response import TemplateResponse
+from django.shortcuts import render, redirect
+from django.db.models import Avg, Min, Max, Count, Q
 from django.utils.html import format_html
+from django.contrib import messages
+from django.utils import timezone
+from django.template.response import TemplateResponse
 from django.contrib.admin.views.main import ChangeList
 from django.db.models.functions import TruncMonth, TruncYear
+from django.core.exceptions import ValidationError
+import threading
+import pandas as pd
+import io
 from analysis_records.models import AnalysisRecord # 确保导入
 
 # Register your models here.
 # crawler/admin.py
-from .models import Brand, CarModel, UsedCar
+from .models import Brand, CarModel, UsedCar, CrawlerTask
+from .crawler_service import CarCrawlerService
+from .forms import CrawlerTaskForm
 
 @admin.register(Brand)
 class BrandAdmin(admin.ModelAdmin):
     list_display = ('name',)
     search_fields = ('name',)
+    actions = ['export_to_excel']
+    
+    def export_to_excel(self, request, queryset):
+        """导出选中的品牌数据到Excel"""
+        import pandas as pd
+        from django.http import HttpResponse
+        import io
+        
+        # 准备数据
+        data = []
+        for brand in queryset:
+            data.append({
+                'ID': brand.id,
+                '品牌名称': brand.name,
+            })
+        
+        # 创建DataFrame
+        df = pd.DataFrame(data)
+        
+        # 创建Excel文件
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            df.to_excel(writer, index=False, sheet_name='品牌数据')
+        
+        # 返回响应
+        response = HttpResponse(
+            output.getvalue(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = 'attachment; filename="brands_export.xlsx"'
+        return response
+    
+    export_to_excel.short_description = '导出选中的品牌到Excel'
 
 @admin.register(CarModel)
 class CarModelAdmin(admin.ModelAdmin):
     list_display = ('name', 'brand')
     list_filter = ('brand',)
     search_fields = ('name', 'brand__name')
+    actions = ['export_to_excel']
+    
+    def export_to_excel(self, request, queryset):
+        """导出选中的车型数据到Excel"""
+        import pandas as pd
+        from django.http import HttpResponse
+        import io
+        
+        # 准备数据
+        data = []
+        for car_model in queryset:
+            data.append({
+                'ID': car_model.id,
+                '车型名称': car_model.name,
+                '品牌': car_model.brand.name,
+            })
+        
+        # 创建DataFrame
+        df = pd.DataFrame(data)
+        
+        # 创建Excel文件
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            df.to_excel(writer, index=False, sheet_name='车型数据')
+        
+        # 返回响应
+        response = HttpResponse(
+            output.getvalue(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = 'attachment; filename="car_models_export.xlsx"'
+        return response
+    
+    export_to_excel.short_description = '导出选中的车型到Excel'
 
 class UsedCarChangeList(ChangeList):
     def get_results(self, *args, **kwargs):
@@ -34,11 +110,12 @@ class UsedCarChangeList(ChangeList):
 
 @admin.register(UsedCar)
 class UsedCarAdmin(admin.ModelAdmin):
-    list_display = ('title', 'car_model', 'price', 'registration_date', 'mileage', 'location', 'view_analysis_button')
-    list_filter = ('car_model__brand', 'registration_date', 'location', 'transmission', 'fuel_type', 'color', 'drive_type', 'emission_standard')
+    list_display = ('title', 'car_model', 'price', 'first_registration', 'mileage', 'location')
+    list_filter = ('car_model__brand', 'first_registration', 'location', 'gearbox', 'fuel_type', 'drive_type', 'emission_standard')
     search_fields = ('title', 'car_model__name', 'car_model__brand__name')
     date_hierarchy = 'created_at'
     change_list_template = 'admin/usedcar_change_list.html'
+    actions = ['export_to_excel']
     
     def get_changelist(self, request, **kwargs):
         return UsedCarChangeList
@@ -51,14 +128,7 @@ class UsedCarAdmin(admin.ModelAdmin):
         ]
         return custom_urls + urls
     
-    def view_analysis_button(self, obj):
-        return format_html(
-            '<a class="button" href="{}?id={}">分析</a>',
-            '../analysis/',
-            obj.id
-        )
-    view_analysis_button.short_description = '数据分析'
-    view_analysis_button.allow_tags = True
+
     
     def analysis_view(self, request):
         # 获取筛选条件
@@ -75,10 +145,53 @@ class UsedCarAdmin(admin.ModelAdmin):
                 {'id': 'count_by_region', 'name': '地区数量分析'},
                 {'id': 'count_by_fuel', 'name': '燃料类型分析'},
                 {'id': 'count_by_transmission', 'name': '变速箱类型分析'},
-                {'id': 'count_by_color', 'name': '车身颜色分析'},
+                {'id': 'count_by_drive_type', 'name': '驱动方式分析'},
             ],
         )
         return TemplateResponse(request, "admin/usedcar_analysis.html", context)
+    
+    def export_to_excel(self, request, queryset):
+        """导出选中的二手车数据到Excel"""
+        import pandas as pd
+        from django.http import HttpResponse
+        import io
+        
+        # 准备数据
+        data = []
+        for car in queryset:
+            data.append({
+                'ID': car.id,
+                '车辆标题': car.title,
+                '品牌': car.car_model.brand.name if car.car_model and car.car_model.brand else '',
+                '车型': car.car_model.name if car.car_model else '',
+                '价格(万元)': float(car.price) if car.price else 0,
+                '里程': car.mileage or '',
+                '所在地': car.location or '',
+                '首次上牌': car.first_registration or '',
+                '变速箱': car.gearbox or '',
+                '燃料类型': car.fuel_type or '',
+                '驱动方式': car.drive_type or '',
+                '排放标准': car.emission_standard or '',
+                '创建时间': car.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            })
+        
+        # 创建DataFrame
+        df = pd.DataFrame(data)
+        
+        # 创建Excel文件
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            df.to_excel(writer, index=False, sheet_name='二手车数据')
+        
+        # 返回响应
+        response = HttpResponse(
+            output.getvalue(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = 'attachment; filename="used_cars_export.xlsx"'
+        return response
+    
+    export_to_excel.short_description = '导出选中的二手车到Excel'
     
     def analysis_data_api(self, request):
         # 获取筛选条件
@@ -109,22 +222,39 @@ class UsedCarAdmin(admin.ModelAdmin):
         if regions:
             queryset = queryset.filter(location__in=regions)
         if year_from:
-            queryset = queryset.filter(registration_date__year__gte=year_from)
+            queryset = queryset.filter(first_registration__icontains=year_from)
         if year_to:
-            queryset = queryset.filter(registration_date__year__lte=year_to)
+            queryset = queryset.filter(first_registration__icontains=year_to)
         if date_from:
-            queryset = queryset.filter(registration_date__gte=date_from)
+            # 使用解析后的日期字段进行精确筛选
+            try:
+                from datetime import datetime
+                date_from_obj = datetime.strptime(date_from, '%Y-%m-%d').date()
+                queryset = queryset.filter(registration_date__gte=date_from_obj)
+            except:
+                # 如果日期格式不正确，回退到字符串包含查询
+                queryset = queryset.filter(first_registration__icontains=date_from)
         if date_to:
-            queryset = queryset.filter(registration_date__lte=date_to)
+            # 使用解析后的日期字段进行精确筛选
+            try:
+                from datetime import datetime
+                date_to_obj = datetime.strptime(date_to, '%Y-%m-%d').date()
+                queryset = queryset.filter(registration_date__lte=date_to_obj)
+            except:
+                # 如果日期格式不正确，回退到字符串包含查询
+                queryset = queryset.filter(first_registration__icontains=date_to)
         if mileage_from:
+            # 使用数值字段进行筛选（万公里单位）
             queryset = queryset.filter(mileage__gte=float(mileage_from))
         if mileage_to:
+            # 使用数值字段进行筛选（万公里单位）
             queryset = queryset.filter(mileage__lte=float(mileage_to))
         
         # 根据分析类型执行不同的分析
         result = {}
         if analysis_type == 'price_by_brand':
-            data = queryset.values('car_model__brand__name').annotate(
+            # 过滤掉价格为空或无效的数据，限制返回数量防止性能问题
+            data = queryset.exclude(price__isnull=True).exclude(price__lte=0).values('car_model__brand__name').annotate(
                 avg_price=Avg('price'),
                 min_price=Min('price'),
                 max_price=Max('price'),
@@ -137,12 +267,18 @@ class UsedCarAdmin(admin.ModelAdmin):
                 'min_values': [float(item['min_price']) for item in data],
                 'max_values': [float(item['max_price']) for item in data],
                 'counts': [item['car_count'] for item in data],
+                'detailed_data': [{
+                    'min_price': float(item['min_price']),
+                    'max_price': float(item['max_price']),
+                    'car_count': item['car_count']
+                } for item in data],
                 'title': '品牌平均价格(万元)',
                 'type': 'bar'
             }
         
         elif analysis_type == 'price_by_region':
-            data = queryset.values('location').annotate(
+            # 过滤掉价格为空、地区为空或无效的数据，限制返回数量防止性能问题
+            data = queryset.exclude(price__isnull=True).exclude(price__lte=0).exclude(location__isnull=True).exclude(location='').values('location').annotate(
                 avg_price=Avg('price'),
                 min_price=Min('price'),
                 max_price=Max('price'),
@@ -151,48 +287,90 @@ class UsedCarAdmin(admin.ModelAdmin):
             
             result = {
                 'labels': [item['location'] for item in data],
+                'regions': [item['location'] for item in data],  # 添加 regions 属性以保持兼容性
                 'values': [float(item['avg_price']) for item in data],
                 'min_values': [float(item['min_price']) for item in data],
                 'max_values': [float(item['max_price']) for item in data],
                 'counts': [item['car_count'] for item in data],
+                'detailed_data': [{
+                    'min_price': float(item['min_price']),
+                    'max_price': float(item['max_price']),
+                    'car_count': item['car_count']
+                } for item in data],
                 'title': '地区平均价格(万元)',
                 'type': 'bar'
             }
         
         elif analysis_type == 'price_by_year':
-            data = queryset.exclude(registration_date=None).values('registration_date__year').annotate(
-                avg_price=Avg('price'),
-                min_price=Min('price'),
-                max_price=Max('price'),
-                car_count=Count('id')
-            ).filter(car_count__gte=3).order_by('registration_date__year')
+            # 由于first_registration是字符串字段，我们需要提取年份进行分析
+            # 过滤掉价格为空、首次上牌为空的数据
+            valid_cars = queryset.exclude(price__isnull=True).exclude(price__lte=0).exclude(registration_date__isnull=True)
+            
+            # 手动提取年份并分组
+            year_data = {}
+            for car in valid_cars:
+                # 从registration_date字段中提取年份
+                if car.registration_date:
+                    year = str(car.registration_date.year)
+                    if year not in year_data:
+                        year_data[year] = {'prices': [], 'count': 0}
+                    year_data[year]['prices'].append(float(car.price))
+                    year_data[year]['count'] += 1
+            
+            # 计算每年的统计数据
+            data = []
+            for year, info in sorted(year_data.items()):
+                if info['count'] >= 3:  # 至少3辆车才显示
+                    prices = info['prices']
+                    data.append({
+                        'year': year,
+                        'avg_price': sum(prices) / len(prices),
+                        'min_price': min(prices),
+                        'max_price': max(prices),
+                        'car_count': info['count']
+                    })
             
             result = {
-                'labels': [str(item['registration_date__year']) for item in data],
-                'values': [float(item['avg_price']) for item in data],
-                'min_values': [float(item['min_price']) for item in data],
-                'max_values': [float(item['max_price']) for item in data],
+                'labels': [item['year'] for item in data],
+                'values': [item['avg_price'] for item in data],
+                'min_values': [item['min_price'] for item in data],
+                'max_values': [item['max_price'] for item in data],
                 'counts': [item['car_count'] for item in data],
+                'detailed_data': [{
+                    'min_price': item['min_price'],
+                    'max_price': item['max_price'],
+                    'car_count': item['car_count']
+                } for item in data],
                 'title': '年份平均价格(万元)',
                 'type': 'line'
             }
         
         elif analysis_type == 'price_by_mileage':
-            # 创建里程范围
-            ranges = [(0, 2), (2, 5), (5, 10), (10, 15), (15, 20), (20, 30), (30, 100)]
+            # 创建里程范围，过滤掉价格和里程为空或无效的数据
+            ranges = [(0, 2), (2, 5), (5, 10), (10, 15), (15, 20), (20, 30), (30, float('inf'))]
             data = []
             
             for i, (start, end) in enumerate(ranges):
-                range_data = queryset.filter(mileage__gte=start, mileage__lt=end).aggregate(
-                    avg_price=Avg('price'),
-                    min_price=Min('price'),
-                    max_price=Max('price'),
-                    car_count=Count('id')
-                )
+                if end == float('inf'):
+                    range_data = queryset.exclude(price__isnull=True).exclude(price__lte=0).exclude(mileage__isnull=True).filter(mileage__gte=start).aggregate(
+                        avg_price=Avg('price'),
+                        min_price=Min('price'),
+                        max_price=Max('price'),
+                        car_count=Count('id')
+                    )
+                    label = f'{start}万公里以上'
+                else:
+                    range_data = queryset.exclude(price__isnull=True).exclude(price__lte=0).exclude(mileage__isnull=True).filter(mileage__gte=start, mileage__lt=end).aggregate(
+                        avg_price=Avg('price'),
+                        min_price=Min('price'),
+                        max_price=Max('price'),
+                        car_count=Count('id')
+                    )
+                    label = f'{start}-{end}万公里'
                 
-                if range_data['car_count'] > 0:
+                if range_data['car_count'] and range_data['car_count'] > 0:
                     data.append({
-                        'range': f"{start}-{end}万公里",
+                        'range': label,
                         'avg_price': range_data['avg_price'],
                         'min_price': range_data['min_price'],
                         'max_price': range_data['max_price'],
@@ -205,6 +383,11 @@ class UsedCarAdmin(admin.ModelAdmin):
                 'min_values': [float(item['min_price']) for item in data],
                 'max_values': [float(item['max_price']) for item in data],
                 'counts': [item['car_count'] for item in data],
+                'detailed_data': [{
+                    'min_price': float(item['min_price']),
+                    'max_price': float(item['max_price']),
+                    'car_count': item['car_count']
+                } for item in data],
                 'title': '里程与平均价格关系(万元)',
                 'type': 'line'
             }
@@ -212,9 +395,10 @@ class UsedCarAdmin(admin.ModelAdmin):
         # ... (其他分析类型的代码保持不变) ...
         
         elif analysis_type == 'count_by_brand':
-            data = queryset.values('car_model__brand__name').annotate(
+            # 过滤掉品牌为空的数据，限制返回数量防止性能问题
+            data = queryset.exclude(car_model__brand__name__isnull=True).exclude(car_model__brand__name='').values('car_model__brand__name').annotate(
                 car_count=Count('id')
-            ).order_by('-car_count')
+            ).filter(car_count__gt=0).order_by('-car_count')[:30]  # 限制最多30个品牌
             
             result = {
                 'labels': [item['car_model__brand__name'] for item in data],
@@ -224,12 +408,14 @@ class UsedCarAdmin(admin.ModelAdmin):
             }
         
         elif analysis_type == 'count_by_region':
-            data = queryset.values('location').annotate(
+            # 过滤掉地区为空的数据，限制返回数量防止性能问题
+            data = queryset.exclude(location__isnull=True).exclude(location='').values('location').annotate(
                 car_count=Count('id')
-            ).order_by('-car_count')
+            ).filter(car_count__gt=0).order_by('-car_count')[:30]  # 限制最多30个地区
             
             result = {
                 'labels': [item['location'] for item in data],
+                'regions': [item['location'] for item in data],  # 添加 regions 属性以保持兼容性
                 'values': [item['car_count'] for item in data],
                 'title': '地区车辆数量',
                 'type': 'bar'
@@ -248,35 +434,47 @@ class UsedCarAdmin(admin.ModelAdmin):
             }
         
         elif analysis_type == 'count_by_transmission':
-            data = queryset.exclude(transmission=None).exclude(transmission='').values('transmission').annotate(
+            data = queryset.exclude(gearbox=None).exclude(gearbox='').values('gearbox').annotate(
                 car_count=Count('id')
             ).order_by('-car_count')
             
             result = {
-                'labels': [item['transmission'] for item in data],
+                'labels': [item['gearbox'] for item in data],
                 'values': [item['car_count'] for item in data],
                 'title': '变速箱类型分布',
                 'type': 'pie'
             }
         
-        elif analysis_type == 'count_by_color':
-            data = queryset.exclude(color=None).exclude(color='').values('color').annotate(
+        elif analysis_type == 'count_by_drive_type':
+            data = queryset.exclude(drive_type=None).exclude(drive_type='').values('drive_type').annotate(
                 car_count=Count('id')
             ).order_by('-car_count')
             
             result = {
-                'labels': [item['color'] for item in data],
+                'labels': [item['drive_type'] for item in data],
                 'values': [item['car_count'] for item in data],
-                'title': '车身颜色分布',
+                'title': '驱动方式分布',
                 'type': 'pie'
             }
         
-        # 添加统计摘要
+        else:
+            # 默认处理未知的分析类型
+            result = {
+                'labels': [],
+                'values': [],
+                'title': '未知分析类型',
+                'type': 'bar',
+                'error': f'不支持的分析类型: {analysis_type}'
+            }
+        
+        # 添加统计摘要，过滤掉价格为空或无效的数据
+        valid_price_queryset = queryset.exclude(price__isnull=True).exclude(price__lte=0)
         result['summary'] = {
             'total_count': queryset.count(),
-            'avg_price': float(queryset.aggregate(avg_price=Avg('price'))['avg_price'] or 0),
-            'min_price': float(queryset.aggregate(min_price=Min('price'))['min_price'] or 0),
-            'max_price': float(queryset.aggregate(max_price=Max('price'))['max_price'] or 0),
+            'valid_price_count': valid_price_queryset.count(),
+            'avg_price': float(valid_price_queryset.aggregate(avg_price=Avg('price'))['avg_price'] or 0),
+            'min_price': float(valid_price_queryset.aggregate(min_price=Min('price'))['min_price'] or 0),
+            'max_price': float(valid_price_queryset.aggregate(max_price=Max('price'))['max_price'] or 0),
         }
 
         if export_to_excel:
@@ -344,8 +542,8 @@ class UsedCarAdmin(admin.ModelAdmin):
                 # 通用导出，导出筛选后的原始数据
                 data_list = list(queryset.values(
                     'title', 'car_model__brand__name', 'car_model__name', 'price', 
-                    'registration_date', 'mileage', 'location', 'transmission', 
-                    'fuel_type', 'color', 'emission_standard'
+                    'first_registration', 'mileage', 'location', 'gearbox', 
+                    'fuel_type', 'drive_type', 'emission_standard'
                 ))
                 df = pd.DataFrame(data_list)
                 filename = "filtered_used_cars_data.xlsx"
@@ -360,27 +558,300 @@ class UsedCarAdmin(admin.ModelAdmin):
             )
             response['Content-Disposition'] = f'attachment; filename="{filename}"'
             return response
-
-        # 保存分析记录
-        if not export_to_excel and request.user.is_authenticated:
-            from analysis_records.models import AnalysisRecord
-            # 为了简化，参数直接保存GET请求的字典，结果摘要可以是图表的标题或部分数据
-            record_params = dict(request.GET)
-            # 移除可能存在的敏感信息或过大的数据，例如文件内容
-            if 'csrfmiddlewaretoken' in record_params: # 示例，实际情况可能不同
-                del record_params['csrfmiddlewaretoken']
-
-            summary_for_record = result.get('title', '未知分析')
-            if 'labels' in result and 'values' in result and len(result['labels']) > 0:
-                summary_for_record += f" - {result['labels'][0]}: {result['values'][0]}"
-                if len(result['labels']) > 1:
-                    summary_for_record += "...等"
-            
-            AnalysisRecord.objects.create(
-                user=request.user,
-                analysis_type=analysis_type,
-                parameters=record_params,
-                result_summary=summary_for_record
-            )
-
+        
+        # 如果不是导出Excel，返回JSON数据
         return JsonResponse(result)
+
+@admin.register(CrawlerTask)
+class CrawlerTaskAdmin(admin.ModelAdmin):
+    form = CrawlerTaskForm
+    list_display = ('name', 'target_count', 'actual_count', 'status_display', 'page_range_display', 'progress_display', 'created_at', 'created_by', 'action_buttons')
+    list_filter = ('status', 'created_at', 'created_by')
+    search_fields = ('name', 'created_by__username', 'search_keyword')
+    readonly_fields = ('actual_count', 'status', 'start_time', 'end_time', 'error_message', 'progress_percentage', 'crawled_data')
+    fields = ('name', 'target_count', 'start_page', 'end_page', 'delay_seconds', 'search_keyword', 'actual_count', 'status', 'start_time', 'end_time', 'error_message')
+    
+    def get_form(self, request, obj=None, **kwargs):
+        """自定义表单，添加帮助文本和验证"""
+        form = super().get_form(request, obj, **kwargs)
+        
+        # 为字段添加帮助文本
+        if 'target_count' in form.base_fields:
+            form.base_fields['target_count'].help_text = '目标爬取的车辆数量（建议不超过1000）'
+            form.base_fields['target_count'].widget.attrs.update({'min': '1', 'max': '1000'})
+        
+        if 'start_page' in form.base_fields:
+            form.base_fields['start_page'].help_text = '爬取起始页码（从1开始）'
+            form.base_fields['start_page'].widget.attrs.update({'min': '1'})
+        
+        if 'end_page' in form.base_fields:
+            form.base_fields['end_page'].help_text = '爬取终止页码（必须大于起始页码）'
+            form.base_fields['end_page'].widget.attrs.update({'min': '1'})
+        
+        if 'delay_seconds' in form.base_fields:
+            form.base_fields['delay_seconds'].help_text = '每次请求间隔时间（秒），建议1-3秒'
+            form.base_fields['delay_seconds'].widget.attrs.update({'min': '0.5', 'max': '10', 'step': '0.5'})
+        
+        if 'search_keyword' in form.base_fields:
+            form.base_fields['search_keyword'].help_text = '搜索关键词（可选），如品牌名称或车型'
+        
+        return form
+    
+    actions = ['export_to_excel']
+    
+    def changelist_view(self, request, extra_context=None):
+        """自定义任务列表视图，添加创建任务按钮"""
+        extra_context = extra_context or {}
+        extra_context['create_task_url'] = 'create-task/'
+        return super().changelist_view(request, extra_context)
+    
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path('create-task/', self.admin_site.admin_view(self.create_task_view), name='crawler_crawlertask_create_task'),
+            path('<int:task_id>/start/', self.admin_site.admin_view(self.start_crawl_view), name='crawler_crawlertask_start'),
+            path('<int:task_id>/import/', self.admin_site.admin_view(self.import_data_view), name='crawler_crawlertask_import'),
+            path('<int:task_id>/export/', self.admin_site.admin_view(self.export_data_view), name='crawler_crawlertask_export'),
+            path('<int:task_id>/view-data/', self.admin_site.admin_view(self.view_data), name='crawler_crawlertask_view_data'),
+            path('progress/<int:task_id>/', self.admin_site.admin_view(self.get_task_progress), name='crawler_crawlertask_progress'),
+        ]
+        return custom_urls + urls
+    
+    def page_range_display(self, obj):
+        """显示页码范围"""
+        if obj.end_page:
+            page_info = f"{obj.start_page}-{obj.end_page}页"
+        else:
+            page_info = f"从{obj.start_page}页开始"
+        
+        if obj.search_keyword:
+            page_info += f"<br><small>关键词: {obj.search_keyword}</small>"
+        
+        page_info += f"<br><small>间隔: {obj.delay_seconds}秒</small>"
+        
+        return format_html(page_info)
+    page_range_display.short_description = '爬取范围'
+    
+    def progress_display(self, obj):
+        """显示进度条"""
+        percentage = obj.progress_percentage
+        progress_html = f'''
+        <div data-task-id="{obj.id}" data-status="{obj.status}">
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: {percentage}%;"></div>
+            </div>
+            <div class="progress-text">{obj.actual_count}/{obj.target_count} ({percentage:.1f}%)</div>
+            <div class="real-time-info">最后更新: {timezone.now().strftime('%H:%M:%S')}</div>
+        </div>
+        '''
+        return format_html(progress_html)
+    progress_display.short_description = '进度'
+    
+    def status_display(self, obj):
+        """显示状态"""
+        status_class = f'status-{obj.status}'
+        return format_html(f'<span class="task-status {status_class}">{obj.get_status_display()}</span>')
+    status_display.short_description = '状态'
+    
+    def action_buttons(self, obj):
+        """自定义操作按钮"""
+        buttons = []
+        
+        if obj.status == 'pending':
+            buttons.append(
+                f'<a class="button" href="{obj.id}/start/" style="background-color: #28a745; color: white !important; padding: 5px 10px; text-decoration: none; border-radius: 3px; margin-right: 5px;">开始爬取</a>'
+            )
+        
+        if obj.status == 'completed' and obj.crawled_data:
+            buttons.append(
+                f'<a class="button" href="{obj.id}/view-data/" style="background-color: #17a2b8; color: white !important; padding: 5px 10px; text-decoration: none; border-radius: 3px; margin-right: 5px;">查看数据</a>'
+            )
+            buttons.append(
+                f'<a class="button" href="{obj.id}/import/" style="background-color: #007bff; color: white !important; padding: 5px 10px; text-decoration: none; border-radius: 3px; margin-right: 5px;">导入数据库</a>'
+            )
+            buttons.append(
+                f'<a class="button" href="{obj.id}/export/" style="background-color: #6c757d; color: white !important; padding: 5px 10px; text-decoration: none; border-radius: 3px; margin-right: 5px;">导出Excel</a>'
+            )
+        
+        return format_html(''.join(buttons))
+    action_buttons.short_description = '操作'
+    
+    def create_task_view(self, request):
+        """创建爬虫任务视图"""
+        if request.method == 'POST':
+            name = request.POST.get('name')
+            target_count = int(request.POST.get('target_count', 100))
+            start_page = int(request.POST.get('start_page', 1))
+            end_page = request.POST.get('end_page')
+            delay_seconds = float(request.POST.get('delay_seconds', 2.0))
+            search_keyword = request.POST.get('search_keyword', '').strip()
+            
+            # 处理终止页码
+            end_page = int(end_page) if end_page and end_page.strip() else None
+            
+            task = CrawlerTask.objects.create(
+                name=name,
+                target_count=target_count,
+                start_page=start_page,
+                end_page=end_page,
+                delay_seconds=delay_seconds,
+                search_keyword=search_keyword if search_keyword else None,
+                created_by=request.user
+            )
+            
+            messages.success(request, f'爬虫任务 "{name}" 创建成功！')
+            return redirect('admin:crawler_crawlertask_changelist')
+        
+        context = {
+            'title': '创建爬虫任务',
+            'opts': self.model._meta,
+        }
+        return render(request, 'admin/crawler/create_task.html', context)
+    
+    def start_crawl_view(self, request, task_id):
+        """开始爬取"""
+        try:
+            task = CrawlerTask.objects.get(id=task_id)
+            if task.status != 'pending':
+                messages.error(request, '只能启动等待中的任务！')
+                return redirect('admin:crawler_crawlertask_changelist')
+            
+            # 在后台线程中启动爬虫
+            crawler_service = CarCrawlerService()
+            
+            def run_crawler():
+                crawler_service.crawl_cars(task_id, task.target_count)
+            
+            thread = threading.Thread(target=run_crawler)
+            thread.daemon = True
+            thread.start()
+            
+            messages.success(request, f'爬虫任务 "{task.name}" 已开始运行！')
+            
+        except CrawlerTask.DoesNotExist:
+            messages.error(request, '任务不存在！')
+        
+        return redirect('admin:crawler_crawlertask_changelist')
+    
+    def import_data_view(self, request, task_id):
+        """导入数据到数据库"""
+        try:
+            task = CrawlerTask.objects.get(id=task_id)
+            if task.status != 'completed':
+                messages.error(request, '只能导入已完成的任务数据！')
+                return redirect('admin:crawler_crawlertask_changelist')
+            
+            crawler_service = CarCrawlerService()
+            success, message = crawler_service.import_to_database(task_id)
+            
+            if success:
+                messages.success(request, message)
+            else:
+                messages.error(request, f'导入失败: {message}')
+                
+        except CrawlerTask.DoesNotExist:
+            messages.error(request, '任务不存在！')
+        
+        return redirect('admin:crawler_crawlertask_changelist')
+    
+    def get_task_progress(self, request, task_id):
+        """获取任务进度的API接口"""
+        try:
+            task = CrawlerTask.objects.get(id=task_id)
+            progress_data = {
+                'id': task.id,
+                'name': task.name,
+                'status': task.status,
+                'status_display': task.get_status_display(),
+                'target_count': task.target_count,
+                'actual_count': task.actual_count,
+                'progress_percentage': task.progress_percentage,
+                'start_time': task.start_time.isoformat() if task.start_time else None,
+                'end_time': task.end_time.isoformat() if task.end_time else None,
+                'error_message': task.error_message,
+                'created_at': task.created_at.isoformat(),
+            }
+            return JsonResponse(progress_data)
+        except CrawlerTask.DoesNotExist:
+            return JsonResponse({'error': '任务不存在'}, status=404)
+    
+    def export_data_view(self, request, task_id):
+        """导出数据到Excel"""
+        try:
+            task = CrawlerTask.objects.get(id=task_id)
+            if not task.crawled_data:
+                messages.error(request, '没有可导出的数据！')
+                return redirect('admin:crawler_crawlertask_changelist')
+            
+            # 创建DataFrame
+            df = pd.DataFrame(task.crawled_data)
+            
+            # 创建Excel文件
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                df.to_excel(writer, sheet_name='爬取数据', index=False)
+            
+            output.seek(0)
+            response = HttpResponse(
+                output.getvalue(),
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+            response['Content-Disposition'] = f'attachment; filename="{task.name}_爬取数据.xlsx"'
+            return response
+            
+        except CrawlerTask.DoesNotExist:
+            messages.error(request, '任务不存在！')
+            return redirect('admin:crawler_crawlertask_changelist')
+    
+    def view_data(self, request, task_id):
+        """查看爬取的数据"""
+        try:
+            task = CrawlerTask.objects.get(id=task_id)
+            context = {
+                'title': f'查看爬取数据 - {task.name}',
+                'task': task,
+                'data': task.crawled_data[:100] if task.crawled_data else [],  # 只显示前100条
+                'total_count': len(task.crawled_data) if task.crawled_data else 0,
+                'opts': self.model._meta,
+            }
+            return render(request, 'admin/crawler/view_data.html', context)
+            
+        except CrawlerTask.DoesNotExist:
+            messages.error(request, '任务不存在！')
+            return redirect('admin:crawler_crawlertask_changelist')
+    
+    def export_to_excel(self, request, queryset):
+        """批量导出任务到Excel"""
+        data = []
+        for task in queryset:
+            data.append({
+                '任务名称': task.name,
+                '目标数量': task.target_count,
+                '实际数量': task.actual_count,
+                '状态': task.get_status_display(),
+                '创建者': task.created_by.username,
+                '创建时间': task.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                '开始时间': task.start_time.strftime('%Y-%m-%d %H:%M:%S') if task.start_time else '',
+                '结束时间': task.end_time.strftime('%Y-%m-%d %H:%M:%S') if task.end_time else '',
+                '错误信息': task.error_message or '',
+            })
+        
+        df = pd.DataFrame(data)
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name='爬虫任务', index=False)
+        
+        output.seek(0)
+        response = HttpResponse(
+            output.getvalue(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = 'attachment; filename="爬虫任务列表.xlsx"'
+        return response
+    
+    export_to_excel.short_description = "导出选中项到Excel"
+    
+    def save_model(self, request, obj, form, change):
+        if not change:  # 新建时
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
