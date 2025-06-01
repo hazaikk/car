@@ -11,4 +11,5 @@ urlpatterns = [
     path('vehicle/', views.vehicle_attribute_analysis, name='vehicle_attribute_analysis'),
     path('api/data/', views.analysis_data_api, name='analysis_data_api'),
     path('interactive/', views.interactive_analysis, name='interactive_analysis'),
+    path('export/', views.export_analysis, name='export_analysis'),
 ]

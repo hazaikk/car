@@ -24,7 +24,7 @@ session.mount("http://", adapter)
 # 基础URL和初始页码
 base_url = 'https://www.che168.com/china/a00-a0-a-b-suva0-suva-suvb/0_5/a3_8msdgscncgpi1ltocsp'
 current_page = 1  # 当前页码
-max_count = 10000  # 总共要爬取的数据量
+max_count = 10  # 总共要爬取的数据量
 items_per_page = 40  # 每页抓取的数据条数
 count = 0  # 当前抓取的数据总量
 max_retries = 30  # 最大重试次数
@@ -124,5 +124,5 @@ while count < max_count:
 
 # 将数据保存到Excel文件
 df = pd.DataFrame(car_data)
-df.to_excel('二手车数据.xlsx', index=False)
+df.to_excel('二手车数据1.xlsx', index=False)
 print("数据已保存到 '二手车数据.xlsx'")

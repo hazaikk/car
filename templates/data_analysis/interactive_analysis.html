@@ -76,6 +76,9 @@
                                     <button type="submit" class="btn btn-primary" id="analyzeBtn">
                                         <i class="fas fa-chart-bar"></i> 开始分析
                                     </button>
+                                    <button type="button" class="btn btn-success" id="exportBtn" style="display: none;">
+                                        <i class="fas fa-file-excel"></i> 导出结果
+                                    </button>
                                 </div>
                             </form>
                         </div>
@@ -155,65 +158,92 @@
             </div>
             <div class="modal-body">
                 <!-- 品牌过滤 -->
-                <div class="filter-group" id="brandFilter" style="display: none;">
+                <div class="filter-group" id="brandFilter">
                     <h6>选择品牌</h6>
-                    <div class="row">
+                    <div class="mb-2">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="selectAllBrands" checked>
+                            <label class="form-check-label" for="selectAllBrands">
+                                <strong>全选/取消全选</strong>
+                            </label>
+                        </div>
+                    </div>
+                    <div style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 4px;">
                         {% for brand in brands %}
-                        <div class="col-md-3 mb-2">
-                            <div class="form-check">
-                                <input class="form-check-input brand-checkbox" type="checkbox" value="{{ brand.id }}" id="brand{{ brand.id }}">
-                                <label class="form-check-label" for="brand{{ brand.id }}">
-                                    {{ brand.name }}
-                                </label>
-                            </div>
+                        <div class="form-check">
+                            <input class="form-check-input brand-checkbox" type="checkbox" value="{{ brand.id }}" id="brand{{ brand.id }}" checked>
+                            <label class="form-check-label" for="brand{{ brand.id }}">
+                                {{ brand.name }}
+                            </label>
                         </div>
                         {% endfor %}
                     </div>
                 </div>
                 
                 <!-- 地区过滤 -->
-                <div class="filter-group" id="regionFilter" style="display: none;">
+                <div class="filter-group" id="regionFilter">
                     <h6>选择地区</h6>
-                    <div class="row">
+                    <div class="mb-2">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="selectAllRegions" checked>
+                            <label class="form-check-label" for="selectAllRegions">
+                                <strong>全选/取消全选</strong>
+                            </label>
+                        </div>
+                    </div>
+                    <div style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 4px;">
                         {% for region in regions %}
-                        <div class="col-md-3 mb-2">
-                            <div class="form-check">
-                                <input class="form-check-input region-checkbox" type="checkbox" value="{{ region }}" id="region{{ forloop.counter }}">
-                                <label class="form-check-label" for="region{{ forloop.counter }}">
-                                    {{ region }}
-                                </label>
-                            </div>
+                        <div class="form-check">
+                            <input class="form-check-input region-checkbox" type="checkbox" value="{{ region }}" id="region{{ forloop.counter }}" checked>
+                            <label class="form-check-label" for="region{{ forloop.counter }}">
+                                {{ region }}
+                            </label>
                         </div>
                         {% endfor %}
                     </div>
                 </div>
                 
-                <!-- 年份过滤 -->
-                <div class="filter-group" id="yearFilter" style="display: none;">
-                    <h6>选择年份范围</h6>
+                <!-- 上牌日期过滤 -->
+                <div class="filter-group" id="dateFilter">
+                    <h6>上牌日期范围</h6>
                     <div class="row">
                         <div class="col-md-6">
-                            <label for="yearFrom" class="form-label">从</label>
-                            <input type="number" class="form-control" id="yearFrom" min="1990" max="2023">
+                            <label for="dateFrom" class="form-label">从</label>
+                            <input type="date" class="form-control" id="dateFrom">
                         </div>
                         <div class="col-md-6">
-                            <label for="yearTo" class="form-label">至</label>
-                            <input type="number" class="form-control" id="yearTo" min="1990" max="2023">
+                            <label for="dateTo" class="form-label">至</label>
+                            <input type="date" class="form-control" id="dateTo">
                         </div>
                     </div>
                 </div>
                 
                 <!-- 里程过滤 -->
-                <div class="filter-group" id="mileageFilter" style="display: none;">
-                    <h6>选择里程范围（万公里）</h6>
+                <div class="filter-group" id="mileageFilter">
+                    <h6>里程范围（万公里）</h6>
                     <div class="row">
                         <div class="col-md-6">
                             <label for="mileageFrom" class="form-label">从</label>
-                            <input type="number" class="form-control" id="mileageFrom" min="0" step="0.1">
+                            <input type="number" class="form-control" id="mileageFrom" min="0" step="0.1" placeholder="最小里程">
                         </div>
                         <div class="col-md-6">
                             <label for="mileageTo" class="form-label">至</label>
-                            <input type="number" class="form-control" id="mileageTo" min="0" step="0.1">
+                            <input type="number" class="form-control" id="mileageTo" min="0" step="0.1" placeholder="最大里程">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 价格过滤 -->
+                <div class="filter-group" id="priceFilter">
+                    <h6>价格范围（万元）</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label for="priceFrom" class="form-label">从</label>
+                            <input type="number" class="form-control" id="priceFrom" min="0" step="0.1" placeholder="最低价格">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="priceTo" class="form-label">至</label>
+                            <input type="number" class="form-control" id="priceTo" min="0" step="0.1" placeholder="最高价格">
                         </div>
                     </div>
                 </div>
@@ -287,7 +317,7 @@
                 } else if (currentType === 'region_price') {
                     document.getElementById('regionFilter').style.display = 'block';
                 } else if (currentType === 'year_price') {
-                    document.getElementById('yearFilter').style.display = 'block';
+                    document.getElementById('dateFilter').style.display = 'block';
                 } else if (currentType === 'mileage_price') {
                     document.getElementById('mileageFilter').style.display = 'block';
                 }
@@ -295,6 +325,62 @@
                 document.getElementById('brandFilter').style.display = 'block';
             } else if (currentCategory === 'region') {
                 document.getElementById('regionFilter').style.display = 'block';
+            }
+        });
+        
+        // 全选/取消全选品牌
+        document.getElementById('selectAllBrands').addEventListener('change', function() {
+            const checkboxes = document.querySelectorAll('.brand-checkbox');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+        });
+        
+        // 全选/取消全选地区
+        document.getElementById('selectAllRegions').addEventListener('change', function() {
+            const checkboxes = document.querySelectorAll('.region-checkbox');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+        });
+        
+        // 监听品牌复选框变化
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('brand-checkbox')) {
+                const allBrands = document.querySelectorAll('.brand-checkbox');
+                const checkedBrands = document.querySelectorAll('.brand-checkbox:checked');
+                const selectAllBrands = document.getElementById('selectAllBrands');
+                
+                if (checkedBrands.length === allBrands.length) {
+                    selectAllBrands.checked = true;
+                    selectAllBrands.indeterminate = false;
+                } else if (checkedBrands.length === 0) {
+                    selectAllBrands.checked = false;
+                    selectAllBrands.indeterminate = false;
+                } else {
+                    selectAllBrands.checked = false;
+                    selectAllBrands.indeterminate = true;
+                }
+            }
+        });
+        
+        // 监听地区复选框变化
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('region-checkbox')) {
+                const allRegions = document.querySelectorAll('.region-checkbox');
+                const checkedRegions = document.querySelectorAll('.region-checkbox:checked');
+                const selectAllRegions = document.getElementById('selectAllRegions');
+                
+                if (checkedRegions.length === allRegions.length) {
+                    selectAllRegions.checked = true;
+                    selectAllRegions.indeterminate = false;
+                } else if (checkedRegions.length === 0) {
+                    selectAllRegions.checked = false;
+                    selectAllRegions.indeterminate = false;
+                } else {
+                    selectAllRegions.checked = false;
+                    selectAllRegions.indeterminate = true;
+                }
             }
         });
         
@@ -324,14 +410,25 @@
                 }
             }
             
-            // 收集年份过滤条件
-            if (document.getElementById('yearFilter').style.display !== 'none') {
-                const yearFrom = document.getElementById('yearFrom').value;
-                const yearTo = document.getElementById('yearTo').value;
-                if (yearFrom || yearTo) {
-                    filterData.years = {};
-                    if (yearFrom) filterData.years.from = parseInt(yearFrom);
-                    if (yearTo) filterData.years.to = parseInt(yearTo);
+            // 收集日期过滤条件
+            if (document.getElementById('dateFilter').style.display !== 'none') {
+                const dateFrom = document.getElementById('dateFrom').value;
+                const dateTo = document.getElementById('dateTo').value;
+                if (dateFrom || dateTo) {
+                    filterData.dates = {};
+                    if (dateFrom) filterData.dates.from = dateFrom;
+                    if (dateTo) filterData.dates.to = dateTo;
+                }
+            }
+            
+            // 收集价格过滤条件
+            if (document.getElementById('priceFilter').style.display !== 'none') {
+                const priceFrom = document.getElementById('priceFrom').value;
+                const priceTo = document.getElementById('priceTo').value;
+                if (priceFrom || priceTo) {
+                    filterData.price = {};
+                    if (priceFrom) filterData.price.from = parseFloat(priceFrom);
+                    if (priceTo) filterData.price.to = parseFloat(priceTo);
                 }
             }
             
@@ -749,5 +846,73 @@
         tableHead.innerHTML = headHTML;
         tableBody.innerHTML = bodyHTML || '<tr><td colspan="5" class="text-center">没有数据</td></tr>';
     }
+    
+    // 导出功能
+    document.getElementById('exportBtn').addEventListener('click', function() {
+        if (!currentAnalysisData) {
+            alert('请先进行分析再导出数据');
+            return;
+        }
+        
+        // 构建导出数据
+        const exportData = {
+            analysis_category: currentCategory,
+            analysis_type: currentType,
+            filter_data: filterData,
+            result_data: currentAnalysisData
+        };
+        
+        // 发送导出请求
+        fetch('{% url "car_analysis:data_analysis:export_analysis" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify(exportData)
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.blob();
+            }
+            throw new Error('导出失败');
+        })
+        .then(blob => {
+            // 创建下载链接
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = `数据分析结果_${currentCategory}_${currentType}_${new Date().toISOString().split('T')[0]}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        })
+        .catch(error => {
+            console.error('导出错误:', error);
+            alert('导出失败，请重试');
+        });
+    });
+    
+    // 存储当前分析数据用于导出
+    let currentAnalysisData = null;
+    
+    // 修改分析成功后的处理，显示导出按钮并保存数据
+    const originalFetch = window.fetch;
+    window.fetch = function(...args) {
+        return originalFetch.apply(this, args).then(response => {
+            if (args[0].includes('interactive_analysis') && response.ok) {
+                response.clone().json().then(data => {
+                    if (data.success) {
+                        currentAnalysisData = data.data;
+                        document.getElementById('exportBtn').style.display = 'inline-block';
+                    }
+                });
+            }
+            return response;
+        });
+    };
+});
 </script>
 {% endblock %}

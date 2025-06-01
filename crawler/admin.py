@@ -125,6 +125,8 @@ class UsedCarAdmin(admin.ModelAdmin):
         custom_urls = [
             path('analysis/', self.admin_site.admin_view(self.analysis_view), name='crawler_usedcar_analysis'),
             path('api/analysis-data/', self.admin_site.admin_view(self.analysis_data_api), name='crawler_usedcar_analysis_data'),
+            path('import/', self.admin_site.admin_view(self.import_view), name='crawler_usedcar_import'),
+            path('import/upload/', self.admin_site.admin_view(self.import_upload), name='crawler_usedcar_import_upload'),
         ]
         return custom_urls + urls
     
@@ -192,6 +194,229 @@ class UsedCarAdmin(admin.ModelAdmin):
         return response
     
     export_to_excel.short_description = '导出选中的二手车到Excel'
+    
+    def import_view(self, request):
+        """显示数据导入页面"""
+        context = dict(
+            self.admin_site.each_context(request),
+            title="导入二手车数据",
+        )
+        return TemplateResponse(request, "admin/crawler/import_data.html", context)
+    
+    def import_upload(self, request):
+        """处理Excel文件上传和导入"""
+        if request.method == 'POST' and request.FILES.get('excel_file'):
+            excel_file = request.FILES['excel_file']
+            
+            try:
+                # 读取Excel文件
+                df = pd.read_excel(excel_file)
+                
+                # 基本字段映射
+                field_mapping = {
+                    '车辆名称': 'title',
+                    '价格': 'price',
+                    '详情链接': 'detail_url',
+                    '上牌时间': 'first_registration',
+                    '表显里程': 'mileage',
+                    '变\xa0\xa0速\xa0\xa0箱': 'gearbox',
+                    '燃料类型': 'fuel_type',
+                    '出险查询': 'accident_check',
+                    '年检到期': 'annual_inspection',
+                    '保险到期': 'insurance_expiry',
+                    '过户次数': 'transfer_count',
+                    '所\xa0\xa0在\xa0\xa0地': 'location',
+                    '驱动方式': 'drive_type',
+                    '排放标准': 'emission_standard',
+                    '排\xa0\xa0\xa0\xa0\xa0\xa0\xa0量': 'displacement'
+                }
+                
+                success_count = 0
+                error_count = 0
+                
+
+                for idx, row in df.iterrows():
+                    try:
+                        car_data = {}
+                        
+                        # 处理基本字段
+                        for excel_col, model_field in field_mapping.items():
+                            if excel_col in df.columns:
+                                value = row[excel_col]
+                                
+                                # 特殊处理所在地字段，不跳过空值检查
+                                if model_field == 'location':
+                                    # 特殊处理所在地字段，去除空格并确保不为空
+                                    if not pd.isna(value) and value != '-':
+                                        location_value = str(value).strip()
+                                        if location_value:
+                                            car_data[model_field] = location_value
+                                    continue
+                                
+                                # 跳过空值和'-'
+                                if pd.isna(value) or value == '-' or str(value).strip() == '':
+                                    continue
+                                
+                                # 根据字段类型处理数据
+                                if model_field == 'price':
+                                    car_data[model_field] = self._parse_price(value)
+                                elif model_field == 'mileage':
+                                    parsed_mileage = self._parse_mileage(value)
+                                    if parsed_mileage is not None:
+                                        car_data[model_field] = parsed_mileage
+                                        car_data['mileage_text'] = str(value)
+                                elif model_field == 'first_registration':
+                                    # 处理上牌时间，同时设置first_registration和registration_date
+                                    car_data['first_registration'] = str(value)
+                                    parsed_date = self._parse_date(str(value))
+                                    if parsed_date:
+                                        car_data['registration_date'] = parsed_date
+                                elif model_field in ['annual_inspection', 'insurance_expiry']:
+                                    car_data[model_field] = str(value)
+                                elif model_field == 'transfer_count':
+                                    parsed_count = self._parse_transfer_count(value)
+                                    if parsed_count is not None:
+                                        car_data[model_field] = parsed_count
+                                else:
+                                    car_data[model_field] = str(value)
+                        
+                        # 处理品牌和车型
+                        car_model = None
+                        if '车辆名称' in df.columns:
+                            title = row['车辆名称']
+                            if not pd.isna(title) and str(title).strip():
+                                car_data['title'] = str(title)
+                                brand_name, model_name = self._clean_brand_model(str(title))
+                                
+                                # 获取或创建品牌
+                                brand, _ = Brand.objects.get_or_create(name=brand_name)
+                                
+                                # 获取或创建车型
+                                car_model, _ = CarModel.objects.get_or_create(
+                                    brand=brand,
+                                    name=model_name
+                                )
+                                car_data['car_model'] = car_model
+                        
+                        # 如果没有车型信息，创建默认的
+                        if car_model is None:
+                            default_brand, _ = Brand.objects.get_or_create(name='未知品牌')
+                            car_model, _ = CarModel.objects.get_or_create(
+                                brand=default_brand,
+                                name='未知车型'
+                            )
+                            car_data['car_model'] = car_model
+                            if 'title' not in car_data:
+                                car_data['title'] = '未知车辆'
+                        
+                        # 位置信息已在字段映射中处理，这里不需要重复处理
+                        
+                        # 确保必要字段有默认值
+                        if 'price' not in car_data or car_data['price'] is None:
+                            car_data['price'] = 0.00
+                        
+                        # 创建二手车记录
+                        UsedCar.objects.create(**car_data)
+                        success_count += 1
+                        
+                    except Exception as e:
+                        error_count += 1
+                        print(f"导入第{idx+1}行数据失败: {str(e)}")
+                        print(f"数据内容: {dict(row)}")
+                        print(f"处理后的car_data: {car_data}")
+                        continue
+                
+                messages.success(request, f'导入完成！成功导入 {success_count} 条记录，失败 {error_count} 条记录。')
+                
+            except Exception as e:
+                messages.error(request, f'导入失败：{str(e)}')
+            
+            return redirect('admin:crawler_usedcar_changelist')
+        
+        return redirect('admin:crawler_usedcar_import')
+    
+    def _clean_brand_model(self, title):
+        """从车辆名称中提取品牌和车型"""
+        parts = title.split(' ', 1)
+        if len(parts) < 2:
+            return '未知品牌', title
+        return parts[0], parts[1]
+    
+    def _parse_date(self, date_str):
+        """解析日期字符串"""
+        if not date_str or pd.isna(date_str) or date_str == '-':
+            return None
+        
+        from datetime import datetime
+        try:
+            # 处理"2019年03月"格式
+            if '年' in date_str and '月' in date_str:
+                year = int(date_str.split('年')[0])
+                month = int(date_str.split('年')[1].split('月')[0])
+                return datetime(year, month, 1).date()
+            
+            # 处理"2026-03"格式
+            elif '-' in date_str:
+                parts = date_str.split('-')
+                if len(parts) == 2:
+                    return datetime(int(parts[0]), int(parts[1]), 1).date()
+        except:
+            return None
+    
+    def _parse_mileage(self, mileage_str):
+        """解析里程数，返回万公里为单位的数值"""
+        if not mileage_str or pd.isna(mileage_str):
+            return None
+        
+        from decimal import Decimal
+        try:
+            # 处理"6.7万公里"格式，直接提取数值（已经是万公里单位）
+            if '万公里' in str(mileage_str):
+                value = float(str(mileage_str).replace('万公里', ''))
+                return Decimal(str(value))
+            # 处理纯数字格式，假设是公里，转换为万公里
+            elif str(mileage_str).replace('.', '').isdigit():
+                value = float(str(mileage_str)) / 10000
+                return Decimal(str(value))
+            return None
+        except:
+            return None
+    
+    def _parse_price(self, price):
+        """解析价格"""
+        from decimal import Decimal
+        if pd.isna(price):
+            return Decimal('0.00')
+        try:
+            price_str = str(price).strip()
+            # 处理包含万元的价格格式
+            if '万' in price_str:
+                # 提取数字部分
+                import re
+                numbers = re.findall(r'\d+\.?\d*', price_str)
+                if numbers:
+                    return Decimal(numbers[0])
+            # 处理纯数字
+            else:
+                # 移除可能的非数字字符
+                import re
+                clean_price = re.sub(r'[^\d.]', '', price_str)
+                if clean_price:
+                    return Decimal(clean_price)
+            return Decimal('0.00')
+        except:
+            return Decimal('0.00')
+    
+    def _parse_transfer_count(self, transfer_str):
+        """解析过户次数"""
+        if not transfer_str or pd.isna(transfer_str):
+            return None
+        try:
+            # 提取数字
+            num = ''.join(filter(str.isdigit, str(transfer_str)))
+            return int(num) if num else None
+        except:
+            return None
     
     def analysis_data_api(self, request):
         # 获取筛选条件

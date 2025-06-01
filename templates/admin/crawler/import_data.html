@@ -1,0 +1,119 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_modify %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+&rsaquo; <a href="{% url 'admin:app_list' app_label='crawler' %}">Crawler</a>
+&rsaquo; <a href="{% url 'admin:crawler_usedcar_changelist' %}">二手车</a>
+&rsaquo; {{ title }}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="module aligned">
+    <h1>{{ title }}</h1>
+    
+    <div class="form-row">
+        <div class="field-box">
+            <div class="help">
+                <p><strong>使用说明：</strong></p>
+                <ul>
+                    <li>支持导入Excel文件（.xlsx格式）</li>
+                    <li>Excel文件应包含以下列名：车辆名称、价格、表显里程、所在地、上牌时间、燃料类型、驱动方式、排放标准等</li>
+                    <li>系统会自动解析车辆名称中的品牌和车型信息</li>
+                    <li>导入过程中会跳过无效数据，并在完成后显示导入结果</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <form method="post" action="{% url 'admin:crawler_usedcar_import_upload' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <fieldset class="module aligned">
+            <div class="form-row">
+                <div>
+                    <label for="id_excel_file" class="required">选择Excel文件:</label>
+                    <input type="file" name="excel_file" id="id_excel_file" accept=".xlsx,.xls" required>
+                    <p class="help">请选择要导入的Excel文件</p>
+                </div>
+            </div>
+        </fieldset>
+        
+        <div class="submit-row">
+            <input type="submit" value="开始导入" class="default" name="_save">
+            <a href="{% url 'admin:crawler_usedcar_changelist' %}" class="button cancel-link">取消</a>
+        </div>
+    </form>
+</div>
+
+<style>
+.help {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.help ul {
+    margin: 10px 0 0 20px;
+}
+
+.help li {
+    margin-bottom: 5px;
+}
+
+.form-row {
+    margin-bottom: 15px;
+}
+
+.form-row label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.form-row input[type="file"] {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    width: 300px;
+}
+
+.submit-row {
+    margin-top: 20px;
+    padding: 15px 0;
+    border-top: 1px solid #ddd;
+}
+
+.submit-row input[type="submit"] {
+    background-color: #417690;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-right: 10px;
+}
+
+.submit-row input[type="submit"]:hover {
+    background-color: #205067;
+}
+
+.cancel-link {
+    color: #666;
+    text-decoration: none;
+    padding: 10px 20px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.cancel-link:hover {
+    background-color: #f5f5f5;
+}
+</style>
+{% endblock %}
