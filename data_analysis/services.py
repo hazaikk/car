@@ -160,7 +160,7 @@ class BrandAnalysisService:
         """分析品牌流行度"""
         # 获取各品牌的车辆数量
         brand_popularity_data = Brand.objects.annotate(
-            car_count=Count('car_models__used_cars')
+            car_count=Count('carmodel__usedcar')
         ).filter(car_count__gt=0).order_by('-car_count')
         
         # 转换为适合存储的格式
@@ -181,7 +181,7 @@ class BrandAnalysisService:
         """分析品牌价格区间"""
         # 获取主要品牌的价格区间
         major_brands = Brand.objects.annotate(
-            car_count=Count('car_models__used_cars')
+            car_count=Count('carmodel__usedcar')
         ).filter(car_count__gte=3)  # 至少有3辆车的品牌
         
         brand_price_range_data = []
@@ -233,7 +233,7 @@ class BrandAnalysisService:
         """分析品牌的地区分布"""
         # 获取主要品牌
         major_brands = Brand.objects.annotate(
-            car_count=Count('car_models__used_cars')
+            car_count=Count('carmodel__usedcar')
         ).filter(car_count__gte=5).order_by('-car_count')[:10]  # 取前10个主要品牌
         
         brand_region_data = []

@@ -47,29 +47,108 @@
         <div class="card">
             <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">车辆属性分析</h5>
-                <a href="{% url 'car_analysis:data_analysis:vehicle_attribute_analysis' %}?type={{ analysis_type }}&refresh=true" class="btn btn-light btn-sm">
-                    <i class="fas fa-sync-alt"></i> 刷新分析
-                </a>
+                <div>
+                    <a href="http://127.0.0.1:8000/car_analysis/data/" class="btn btn-light btn-sm me-2">
+                        <i class="fas fa-arrow-left"></i> 返回数据分析
+                    </a>
+                    <button id="refreshBtn" class="btn btn-light btn-sm me-2">
+                        <i class="fas fa-sync-alt"></i> 刷新分析
+                    </button>
+                    <button id="exportImageBtn" class="btn btn-info btn-sm" style="color: white;">
+                        <i class="fas fa-image"></i> 导出图片
+                    </button>
+                </div>
             </div>
             <div class="card-body">
                 <div class="row mb-4">
                     <div class="col-12">
                         <div class="btn-group d-flex flex-wrap" role="group">
-                            <a href="{% url 'car_analysis:data_analysis:vehicle_attribute_analysis' %}?type=vehicle_age" class="btn btn-outline-primary analysis-type-btn {% if analysis_type == 'vehicle_age' %}active{% endif %}">
+                            <button class="btn btn-outline-primary analysis-type-btn active" data-type="vehicle_age">
                                 <i class="fas fa-calendar-alt"></i> 车龄分析
-                            </a>
-                            <a href="{% url 'car_analysis:data_analysis:vehicle_attribute_analysis' %}?type=mileage" class="btn btn-outline-primary analysis-type-btn {% if analysis_type == 'mileage' %}active{% endif %}">
+                            </button>
+                            <button class="btn btn-outline-primary analysis-type-btn" data-type="mileage">
                                 <i class="fas fa-tachometer-alt"></i> 里程分析
-                            </a>
-                            <a href="{% url 'car_analysis:data_analysis:vehicle_attribute_analysis' %}?type=transmission" class="btn btn-outline-primary analysis-type-btn {% if analysis_type == 'transmission' %}active{% endif %}">
+                            </button>
+                            <button class="btn btn-outline-primary analysis-type-btn" data-type="transmission">
                                 <i class="fas fa-cogs"></i> 变速箱类型分析
-                            </a>
-                            <a href="{% url 'car_analysis:data_analysis:vehicle_attribute_analysis' %}?type=fuel_type" class="btn btn-outline-primary analysis-type-btn {% if analysis_type == 'fuel_type' %}active{% endif %}">
+                            </button>
+                            <button class="btn btn-outline-primary analysis-type-btn" data-type="fuel_type">
                                 <i class="fas fa-gas-pump"></i> 燃料类型分析
-                            </a>
-                            <a href="{% url 'car_analysis:data_analysis:vehicle_attribute_analysis' %}?type=color" class="btn btn-outline-primary analysis-type-btn {% if analysis_type == 'color' %}active{% endif %}">
+                            </button>
+                            <button class="btn btn-outline-primary analysis-type-btn" data-type="color">
                                 <i class="fas fa-palette"></i> 车身颜色分析
-                            </a>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 筛选条件 -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h6 class="m-0 font-weight-bold text-primary">筛选条件</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <label for="brandFilter" class="form-label">品牌</label>
+                                <div class="mb-2">
+                                    <input type="checkbox" id="selectAllBrands" class="form-check-input me-1">
+                                    <label for="selectAllBrands" class="form-check-label">全选/取消全选</label>
+                                </div>
+                                <select id="brandFilter" class="form-select" multiple size="4">
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="regionFilter" class="form-label">地区</label>
+                                <div class="mb-2">
+                                    <input type="checkbox" id="selectAllRegions" class="form-check-input me-1">
+                                    <label for="selectAllRegions" class="form-check-label">全选/取消全选</label>
+                                </div>
+                                <select id="regionFilter" class="form-select" multiple size="4">
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="fuelTypeFilter" class="form-label">燃料类型</label>
+                                <div class="mb-2">
+                                    <input type="checkbox" id="selectAllFuelTypes" class="form-check-input me-1">
+                                    <label for="selectAllFuelTypes" class="form-check-label">全选/取消全选</label>
+                                </div>
+                                <select id="fuelTypeFilter" class="form-select" multiple size="4">
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">上牌日期范围</label>
+                                <div class="mb-2">
+                                    <input type="date" id="dateFrom" class="form-control" placeholder="开始日期">
+                                </div>
+                                <div>
+                                    <input type="date" id="dateTo" class="form-control" placeholder="结束日期">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <label class="form-label">价格范围（万元）</label>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <input type="number" id="minPrice" class="form-control" placeholder="最低价格" min="0" step="0.1">
+                                    </div>
+                                    <div class="col-6">
+                                        <input type="number" id="maxPrice" class="form-control" placeholder="最高价格" min="0" step="0.1">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">里程范围（万公里）</label>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <input type="number" id="minMileage" class="form-control" placeholder="最低里程" min="0" step="0.1">
+                                    </div>
+                                    <div class="col-6">
+                                        <input type="number" id="maxMileage" class="form-control" placeholder="最高里程" min="0" step="0.1">
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -245,32 +324,370 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+    let currentChart = null;
+    let currentAnalysisType = 'vehicle_age';
+    
     document.addEventListener('DOMContentLoaded', function() {
-        {% if analysis and analysis.result_data %}
-            const analysisData = {{ analysis.result_data|safe }};
-            const analysisType = "{{ analysis_type }}";
+        // 初始化事件监听器
+        initializeEventListeners();
+        
+        // 加载筛选选项
+        loadFilterOptions();
+        
+        // 延迟加载分析数据，确保筛选选项加载完成
+        setTimeout(() => {
+            loadAnalysisData();
+        }, 1000);
+        
+        // 更新全选复选框状态的函数
+        function updateSelectAllCheckbox(checkboxId, selectId) {
+            const checkbox = document.getElementById(checkboxId);
+            const select = document.getElementById(selectId);
+            const selectedCount = select.selectedOptions.length;
+            const totalCount = select.options.length;
             
-            // 更新统计卡片
-            updateStatCards(analysisData, analysisType);
-            
-            // 渲染主图表
-            renderMainChart(analysisData, analysisType);
-            
-            // 渲染排名
-            renderAttributeRanking(analysisData, analysisType);
-            
-            // 渲染表格数据
-            renderTable(analysisData, analysisType);
-            
-            // 根据分析类型渲染特定内容
-            if (analysisType === 'vehicle_age' || analysisType === 'mileage') {
-                renderPriceRelationChart(analysisData, analysisType);
-            } else if (analysisType === 'transmission' || analysisType === 'fuel_type' || analysisType === 'color') {
-                renderAttributeCards(analysisData, analysisType);
+            if (selectedCount === 0) {
+                checkbox.checked = false;
+                checkbox.indeterminate = false;
+            } else if (selectedCount === totalCount) {
+                checkbox.checked = true;
+                checkbox.indeterminate = false;
+            } else {
+                checkbox.checked = false;
+                checkbox.indeterminate = true;
             }
-        {% endif %}
+        }
+        
+        // 将函数添加到全局作用域
+        window.updateSelectAllCheckbox = updateSelectAllCheckbox;
     });
+    
+    function initializeEventListeners() {
+        // 分析类型按钮
+        document.querySelectorAll('.analysis-type-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                // 更新按钮状态
+                document.querySelectorAll('.analysis-type-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                
+                // 更新分析类型
+                currentAnalysisType = this.dataset.type;
+                
+                // 重新加载数据
+                loadAnalysisData();
+            });
+        });
+        
+        // 刷新按钮
+        document.getElementById('refreshBtn').addEventListener('click', function() {
+            loadAnalysisData();
+        });
+        
+        // 导出图片按钮
+        document.getElementById('exportImageBtn').addEventListener('click', function() {
+            exportToImage();
+        });
+        
+        // 全选/取消全选事件监听器
+        document.getElementById('selectAllBrands').addEventListener('change', function() {
+            const brandFilter = document.getElementById('brandFilter');
+            const isChecked = this.checked;
+            for (let option of brandFilter.options) {
+                option.selected = isChecked;
+            }
+            loadAnalysisData();
+        });
+        
+        document.getElementById('selectAllRegions').addEventListener('change', function() {
+            const regionFilter = document.getElementById('regionFilter');
+            const isChecked = this.checked;
+            for (let option of regionFilter.options) {
+                option.selected = isChecked;
+            }
+            loadAnalysisData();
+        });
+        
+        document.getElementById('selectAllFuelTypes').addEventListener('change', function() {
+            const fuelTypeFilter = document.getElementById('fuelTypeFilter');
+            const isChecked = this.checked;
+            for (let option of fuelTypeFilter.options) {
+                option.selected = isChecked;
+            }
+            loadAnalysisData();
+        });
+        
+        // 多选框变化监听
+        document.getElementById('brandFilter').addEventListener('change', function() {
+            updateSelectAllCheckbox('selectAllBrands', 'brandFilter');
+            loadAnalysisData();
+        });
+        document.getElementById('regionFilter').addEventListener('change', function() {
+            updateSelectAllCheckbox('selectAllRegions', 'regionFilter');
+            loadAnalysisData();
+        });
+        document.getElementById('fuelTypeFilter').addEventListener('change', function() {
+            updateSelectAllCheckbox('selectAllFuelTypes', 'fuelTypeFilter');
+            loadAnalysisData();
+        });
+        
+        // 日期和里程范围变化监听
+        document.getElementById('dateFrom').addEventListener('change', loadAnalysisData);
+        document.getElementById('dateTo').addEventListener('change', loadAnalysisData);
+        document.getElementById('minPrice').addEventListener('change', loadAnalysisData);
+        document.getElementById('maxPrice').addEventListener('change', loadAnalysisData);
+        document.getElementById('minMileage').addEventListener('change', loadAnalysisData);
+        document.getElementById('maxMileage').addEventListener('change', loadAnalysisData);
+    }
+    
+    function loadFilterOptions() {
+        fetch('{% url "data_analysis:get_filter_options" %}')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const filterData = data.data;
+                
+                // 填充品牌选项
+                const brandSelect = document.getElementById('brandFilter');
+                brandSelect.innerHTML = '';
+                filterData.brands.forEach(brand => {
+                    const option = document.createElement('option');
+                    option.value = brand.name;
+                    option.textContent = brand.name;
+                    option.selected = true; // 默认全选
+                    brandSelect.appendChild(option);
+                });
+                
+                // 填充地区选项
+                const regionSelect = document.getElementById('regionFilter');
+                regionSelect.innerHTML = '';
+                filterData.regions.forEach(region => {
+                    const option = document.createElement('option');
+                    option.value = region.name;
+                    option.textContent = region.name;
+                    option.selected = true; // 默认全选
+                    regionSelect.appendChild(option);
+                });
+                
+                // 填充燃料类型选项
+                const fuelTypeSelect = document.getElementById('fuelTypeFilter');
+                fuelTypeSelect.innerHTML = '';
+                filterData.fuel_types.forEach(fuel => {
+                    const option = document.createElement('option');
+                    option.value = fuel.name;
+                    option.textContent = fuel.name;
+                    option.selected = true; // 默认全选
+                    fuelTypeSelect.appendChild(option);
+                });
+                
+                // 设置价格范围提示
+                const minPriceInput = document.getElementById('minPrice');
+                const maxPriceInput = document.getElementById('maxPrice');
+                if (minPriceInput && maxPriceInput) {
+                    minPriceInput.placeholder = `最低价格 (${filterData.price_range.min}万)`;
+                    maxPriceInput.placeholder = `最高价格 (${filterData.price_range.max}万)`;
+                }
+                
+                // 设置里程范围提示
+                const minMileageInput = document.getElementById('minMileage');
+                const maxMileageInput = document.getElementById('maxMileage');
+                if (minMileageInput && maxMileageInput) {
+                    minMileageInput.placeholder = `最低里程 (${filterData.mileage_range.min}万公里)`;
+                    maxMileageInput.placeholder = `最高里程 (${filterData.mileage_range.max}万公里)`;
+                }
+                
+                // 设置全选复选框状态
+                document.getElementById('selectAllBrands').checked = true;
+                document.getElementById('selectAllRegions').checked = true;
+                document.getElementById('selectAllFuelTypes').checked = true;
+            } else {
+                console.error('加载筛选选项失败:', data.error);
+                alert('加载筛选选项失败: ' + (data.error || '未知错误'));
+            }
+        })
+        .catch(error => {
+            console.error('加载筛选选项时发生错误:', error);
+            alert('网络错误，无法加载筛选选项');
+        });
+    }
+    
+    function loadAnalysisData() {
+        showLoading();
+        hideAlerts();
+        
+        // 获取多选的品牌、地区和燃料类型
+        const selectedBrands = Array.from(document.getElementById('brandFilter').selectedOptions).map(option => option.value);
+        const selectedRegions = Array.from(document.getElementById('regionFilter').selectedOptions).map(option => option.value);
+        const selectedFuelTypes = Array.from(document.getElementById('fuelTypeFilter').selectedOptions).map(option => option.value);
+        
+        // 检查是否至少选择了一个品牌和地区
+        if (selectedBrands.length === 0 || selectedRegions.length === 0) {
+            hideLoading();
+            alert('请至少选择一个品牌和一个地区');
+            return;
+        }
+        
+        // 构建URL参数
+        const params = new URLSearchParams();
+        params.append('analysis_type', currentAnalysisType);
+        
+        // 添加多选参数
+        selectedBrands.forEach(brand => params.append('brands', brand));
+        selectedRegions.forEach(region => params.append('regions', region));
+        selectedFuelTypes.forEach(fuel => params.append('fuel_types', fuel));
+        
+        // 添加日期范围参数
+        const dateFrom = document.getElementById('dateFrom').value;
+        const dateTo = document.getElementById('dateTo').value;
+        if (dateFrom) params.append('date_from', dateFrom);
+        if (dateTo) params.append('date_to', dateTo);
+        
+        // 添加价格和里程范围参数
+        const minPrice = document.getElementById('minPrice').value;
+        const maxPrice = document.getElementById('maxPrice').value;
+        const minMileage = document.getElementById('minMileage').value;
+        const maxMileage = document.getElementById('maxMileage').value;
+        
+        if (minPrice) params.append('min_price', minPrice);
+        if (maxPrice) params.append('max_price', maxPrice);
+        if (minMileage) params.append('min_mileage', minMileage);
+        if (maxMileage) params.append('max_mileage', maxMileage);
+        
+        fetch(`{% url "data_analysis:vehicle_attribute_analysis_data" %}?${params.toString()}`, {
+            method: 'GET'
+        })
+        .then(response => response.json())
+        .then(data => {
+            hideLoading();
+            
+            if (data && data.labels && data.labels.length > 0) {
+                showAnalysisResults(data);
+            } else if (data && data.error) {
+                showErrorAlert(data.error);
+            } else {
+                showNoDataAlert();
+            }
+        })
+        .catch(error => {
+            hideLoading();
+            console.error('加载分析数据时发生错误:', error);
+            showErrorAlert('网络错误，无法加载分析数据');
+        });
+    }
+    
+    function showLoading() {
+        // 显示加载状态
+        console.log('Loading...');
+    }
+    
+    function hideLoading() {
+        // 隐藏加载状态
+        console.log('Loading complete');
+    }
+    
+    function hideAlerts() {
+        // 隐藏警告信息
+    }
+    
+    function showAnalysisResults(data) {
+        // 显示分析结果
+        console.log('Analysis results:', data);
+        
+        // 更新摘要
+        updateSummary(data);
+        
+        // 更新统计卡片
+        updateStatCards(data, currentAnalysisType);
+        
+        // 渲染图表
+        renderChart(data, currentAnalysisType);
+        
+        // 渲染排名
+        renderAttributeRanking(data, currentAnalysisType);
+        
+        // 渲染属性卡片（如果适用）
+        if (['transmission', 'fuel_type', 'color'].includes(currentAnalysisType)) {
+            renderAttributeCards(data, currentAnalysisType);
+        }
+        
+        // 渲染价格关系图表（如果适用）
+        if (['vehicle_age', 'mileage'].includes(currentAnalysisType)) {
+            renderPriceRelationChart(data, currentAnalysisType);
+        }
+        
+        // 渲染数据表格
+        renderTable(data, currentAnalysisType);
+    }
+    
+    function showNoDataAlert() {
+        alert('没有找到符合条件的数据');
+    }
+    
+    function showErrorAlert(message) {
+        alert('错误: ' + message);
+    }
+    
+    function updateSummary(data) {
+        const summaryElement = document.getElementById('analysisSummary');
+        if (!summaryElement) return;
+        
+        let summaryText = '';
+        
+        if (currentAnalysisType === 'fuel_type') {
+            // 生成燃料类型分析摘要
+            if (data.fuel_types && data.fuel_type_counts && data.fuel_types.length > 0) {
+                const topFuelTypes = data.fuel_types.slice(0, 3);
+                const topPercentages = data.fuel_type_counts.slice(0, 3).map((count, i) => 
+                    ((count / data.total_cars) * 100).toFixed(1)
+                );
+                
+                summaryText = `最常见的三种燃料类型是：${topFuelTypes.join(', ')}，分别占比${topPercentages.join('%, ')}%。`;
+            }
+        } else if (currentAnalysisType === 'transmission') {
+            if (data.transmission_types && data.transmission_counts && data.transmission_types.length > 0) {
+                const topTransmissions = data.transmission_types.slice(0, 3);
+                const topPercentages = data.transmission_counts.slice(0, 3).map((count, i) => 
+                    ((count / data.total_cars) * 100).toFixed(1)
+                );
+                
+                summaryText = `最常见的三种变速箱类型是：${topTransmissions.join(', ')}，分别占比${topPercentages.join('%, ')}%。`;
+            }
+        } else if (currentAnalysisType === 'color') {
+            if (data.colors && data.color_counts && data.colors.length > 0) {
+                const topColors = data.colors.slice(0, 3);
+                const topPercentages = data.color_counts.slice(0, 3).map((count, i) => 
+                    ((count / data.total_cars) * 100).toFixed(1)
+                );
+                
+                summaryText = `最受欢迎的三种车身颜色是：${topColors.join(', ')}，分别占比${topPercentages.join('%, ')}%。`;
+            }
+        } else if (currentAnalysisType === 'vehicle_age') {
+            if (data.avg_age !== undefined) {
+                summaryText = `车辆平均车龄为${data.avg_age.toFixed(1)}年，车龄范围从${data.min_age}年到${data.max_age}年。`;
+            }
+        } else if (currentAnalysisType === 'mileage') {
+            if (data.avg_mileage !== undefined) {
+                summaryText = `车辆平均里程为${data.avg_mileage.toFixed(1)}万公里，里程范围从${data.min_mileage}万公里到${data.max_mileage}万公里。`;
+            }
+        }
+        
+        if (summaryText) {
+            summaryElement.textContent = summaryText;
+        }
+    }
+    
+    function exportToImage() {
+        // 导出图片功能
+        if (currentChart) {
+            const link = document.createElement('a');
+            link.download = `车辆属性分析_${currentAnalysisType}_${new Date().toISOString().slice(0, 10)}.png`;
+            link.href = currentChart.toBase64Image();
+            link.click();
+        } else {
+            alert('没有可导出的图表');
+        }
+    }
     
     function updateStatCards(data, type) {
         if (type === 'vehicle_age') {

@@ -93,20 +93,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3 mb-3">
-                        <div class="card h-100 analysis-card">
-                            <div class="card-body text-center">
-                                <div class="analysis-icon">
-                                    <i class="fas fa-car"></i>
-                                </div>
-                                <h5 class="card-title">品牌分析</h5>
-                                <p class="card-text">分析各品牌的市场份额、价格区间和地区分布。</p>
-                            </div>
-                            <div class="card-footer text-center">
-                                <a href="{% url 'car_analysis:data_analysis:brand_analysis' %}" class="btn btn-primary">查看分析</a>
-                            </div>
-                        </div>
-                    </div>
+
                     <div class="col-md-3 mb-3">
                         <div class="card h-100 analysis-card">
                             <div class="card-body text-center">
@@ -121,37 +108,9 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3 mb-3">
-                        <div class="card h-100 analysis-card">
-                            <div class="card-body text-center">
-                                <div class="analysis-icon">
-                                    <i class="fas fa-cogs"></i>
-                                </div>
-                                <h5 class="card-title">车辆属性分析</h5>
-                                <p class="card-text">分析燃料类型、变速箱、颜色等车辆属性的分布情况。</p>
-                            </div>
-                            <div class="card-footer text-center">
-                                <a href="{% url 'car_analysis:data_analysis:vehicle_attribute_analysis' %}" class="btn btn-primary">查看分析</a>
-                            </div>
-                        </div>
-                    </div>
+
                 </div>
-                <div class="row mt-4">
-                    <div class="col-12">
-                        <div class="card h-100 analysis-card bg-gradient-primary text-white">
-                            <div class="card-body text-center">
-                                <div class="analysis-icon text-white">
-                                    <i class="fas fa-sliders-h"></i>
-                                </div>
-                                <h5 class="card-title">交互式数据分析</h5>
-                                <p class="card-text">自定义选择数据和分析功能，进行个性化的数据分析和可视化。</p>
-                            </div>
-                            <div class="card-footer text-center">
-                                <a href="{% url 'car_analysis:data_analysis:interactive_analysis' %}" class="btn btn-light">开始分析</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+
             </div>
         </div>
     </div>
@@ -182,21 +141,7 @@
                     </div>
                     {% endif %}
                     
-                    {% if latest_brand_analysis %}
-                    <div class="col-md-6 mb-3">
-                        <div class="card h-100">
-                            <div class="card-header">
-                                <h5 class="card-title mb-0">品牌分析 - {{ latest_brand_analysis.get_analysis_type_display }}</h5>
-                            </div>
-                            <div class="card-body">
-                                <p>{{ latest_brand_analysis.summary|truncatewords:50 }}</p>
-                            </div>
-                            <div class="card-footer">
-                                <a href="{% url 'car_analysis:data_analysis:brand_analysis' %}?type={{ latest_brand_analysis.analysis_type }}" class="btn btn-sm btn-outline-primary">查看详情</a>
-                            </div>
-                        </div>
-                    </div>
-                    {% endif %}
+
                 </div>
             </div>
         </div>

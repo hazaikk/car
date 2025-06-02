@@ -111,87 +111,224 @@ document.addEventListener('DOMContentLoaded', function() {
     const performanceChart = echarts.init(document.getElementById('performanceChart'));
     const ratingChart = echarts.init(document.getElementById('ratingChart'));
     
-    // 性能参数图表配置
-    const performanceOption = {
-        title: {
-            text: '性能参数雷达图'
-        },
+    // 存储选中的车型数据
+    let selectedCars = [];
+    let comparisonData = {};
+    
+    // 获取所有车型数据
+    async function loadCarModels() {
+        try {
+            const response = await fetch('/api/car-models/');
+            const data = await response.json();
+            
+            // 填充车型选择下拉框
+            const selects = document.querySelectorAll('.car-select');
+            selects.forEach(select => {
+                select.innerHTML = '<option value="">请选择车型</option>';
+                data.forEach(car => {
+                    const option = document.createElement('option');
+                    option.value = car.id;
+                    option.textContent = `${car.brand_name} ${car.name}`;
+                    select.appendChild(option);
+                });
+            });
+        } catch (error) {
+            console.error('加载车型数据失败:', error);
+        }
+    }
+    
+    // 获取车型对比数据
+    async function getComparisonData(carIds) {
+        try {
+            const response = await fetch('/car_analysis/comparison/data/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({ car_ids: carIds })
+            });
+            return await response.json();
+        } catch (error) {
+            console.error('获取对比数据失败:', error);
+            return null;
+        }
+    }
+    
+    // 更新基本信息表格
+    function updateBasicInfoTable(data) {
+        const tbody = document.querySelector('#basicInfoTable tbody');
+        tbody.innerHTML = '';
+        
+        const fields = [
+            { key: 'price', label: '厂商指导价' },
+            { key: 'launch_date', label: '上市时间' },
+            { key: 'sales_volume', label: '月销量' },
+            { key: 'fuel_type', label: '燃料类型' },
+            { key: 'gearbox', label: '变速箱' },
+            { key: 'engine_displacement', label: '排量' }
+        ];
+        
+        fields.forEach(field => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${field.label}</td>
+                ${data.cars.map(car => `<td>${car[field.key] || '-'}</td>`).join('')}
+            `;
+            tbody.appendChild(row);
+        });
+    }
+    
+    // 更新性能参数雷达图
+    function updatePerformanceChart(data) {
+        const option = {
+            title: {
+                text: '性能参数雷达图'
+            },
+            tooltip: {},
+            legend: {
+                data: data.cars.map(car => car.name)
+            },
+            radar: {
+                indicator: [
+                    { name: '动力评分', max: 5 },
+                    { name: '操控评分', max: 5 },
+                    { name: '舒适性评分', max: 5 },
+                    { name: '油耗表现', max: 5 },
+                    { name: '空间评分', max: 5 }
+                ]
+            },
+            series: [{
+                type: 'radar',
+                data: data.cars.map(car => ({
+                    value: [
+                        car.performance?.power || 0,
+                        car.performance?.handling || 0,
+                        car.performance?.comfort || 0,
+                        car.performance?.fuel_economy || 0,
+                        car.performance?.space || 0
+                    ],
+                    name: car.name
+                }))
+            }]
+        };
+        
+        performanceChart.setOption(option);
+    }
+    
+    // 更新用户评价柱状图
+    function updateRatingChart(data) {
+        const option = {
+            title: {
+                text: '用户评分对比'
+            },
+            tooltip: {},
+            legend: {
+                data: data.cars.map(car => car.name)
+            },
+            xAxis: {
+                data: ['综合评分', '外观', '内饰', '配置', '动力', '操控', '油耗', '舒适性']
+            },
+            yAxis: {
+                type: 'value',
+                max: 5
+            },
+            series: data.cars.map(car => ({
+                name: car.name,
+                type: 'bar',
+                data: [
+                    car.ratings?.overall || 0,
+                    car.ratings?.appearance || 0,
+                    car.ratings?.interior || 0,
+                    car.ratings?.configuration || 0,
+                    car.ratings?.power || 0,
+                    car.ratings?.handling || 0,
+                    car.ratings?.fuel_economy || 0,
+                    car.ratings?.comfort || 0
+                ]
+            }))
+        };
+        
+        ratingChart.setOption(option);
+    }
+    
+    // 开始对比按钮点击事件
+    document.getElementById('startComparison').addEventListener('click', async function() {
+        const selects = document.querySelectorAll('.car-select');
+        const selectedIds = Array.from(selects)
+            .map(select => select.value)
+            .filter(value => value);
+        
+        if (selectedIds.length < 2) {
+            alert('请至少选择两款车型进行对比');
+            return;
+        }
+        
+        // 显示加载状态
+        this.disabled = true;
+        this.textContent = '加载中...';
+        
+        try {
+            const data = await getComparisonData(selectedIds);
+            if (data && data.success) {
+                updateBasicInfoTable(data);
+                updatePerformanceChart(data);
+                updateRatingChart(data);
+                
+                // 显示对比结果
+                document.getElementById('comparisonResults').style.display = 'block';
+            } else {
+                alert('获取对比数据失败，请重试');
+            }
+        } catch (error) {
+            console.error('对比失败:', error);
+            alert('对比失败，请重试');
+        } finally {
+            this.disabled = false;
+            this.textContent = '开始对比';
+        }
+    });
+    
+    // 初始化图表配置
+    const initialPerformanceOption = {
+        title: { text: '性能参数雷达图' },
         tooltip: {},
-        legend: {
-            data: ['车型1', '车型2', '车型3']
-        },
+        legend: { data: [] },
         radar: {
             indicator: [
-                { name: '动力', max: 100 },
-                { name: '操控', max: 100 },
-                { name: '舒适性', max: 100 },
-                { name: '油耗', max: 100 },
-                { name: '空间', max: 100 }
+                { name: '动力评分', max: 5 },
+                { name: '操控评分', max: 5 },
+                { name: '舒适性评分', max: 5 },
+                { name: '油耗表现', max: 5 },
+                { name: '空间评分', max: 5 }
             ]
         },
-        series: [{
-            type: 'radar',
-            data: [
-                {
-                    value: [0, 0, 0, 0, 0],
-                    name: '车型1'
-                },
-                {
-                    value: [0, 0, 0, 0, 0],
-                    name: '车型2'
-                },
-                {
-                    value: [0, 0, 0, 0, 0],
-                    name: '车型3'
-                }
-            ]
-        }]
+        series: [{ type: 'radar', data: [] }]
     };
     
-    // 用户评价图表配置
-    const ratingOption = {
-        title: {
-            text: '用户评分对比'
-        },
+    const initialRatingOption = {
+        title: { text: '用户评分对比' },
         tooltip: {},
-        legend: {
-            data: ['车型1', '车型2', '车型3']
-        },
+        legend: { data: [] },
         xAxis: {
             data: ['综合评分', '外观', '内饰', '配置', '动力', '操控', '油耗', '舒适性']
         },
-        yAxis: {
-            type: 'value',
-            max: 5
-        },
-        series: [
-            {
-                name: '车型1',
-                type: 'bar',
-                data: [0, 0, 0, 0, 0, 0, 0, 0]
-            },
-            {
-                name: '车型2',
-                type: 'bar',
-                data: [0, 0, 0, 0, 0, 0, 0, 0]
-            },
-            {
-                name: '车型3',
-                type: 'bar',
-                data: [0, 0, 0, 0, 0, 0, 0, 0]
-            }
-        ]
+        yAxis: { type: 'value', max: 5 },
+        series: []
     };
     
-    // 渲染图表
-    performanceChart.setOption(performanceOption);
-    ratingChart.setOption(ratingOption);
+    // 渲染初始图表
+    performanceChart.setOption(initialPerformanceOption);
+    ratingChart.setOption(initialRatingOption);
     
     // 响应窗口大小变化
     window.addEventListener('resize', function() {
         performanceChart.resize();
         ratingChart.resize();
     });
+    
+    // 加载车型数据
+    loadCarModels();
 });
 </script>
-{% endblock %} 
+{% endblock %}

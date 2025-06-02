@@ -19,6 +19,93 @@ def comparison(request):
     """竞品对比页面"""
     return render(request, 'car_analysis/comparison.html')
 
+@login_required
+def comparison_data(request):
+    """竞品对比数据API"""
+    if request.method == 'POST':
+        try:
+            import json
+            data = json.loads(request.body)
+            car_ids = data.get('car_ids', [])
+            
+            if not car_ids or len(car_ids) < 2:
+                return JsonResponse({
+                    'success': False,
+                    'error': '请至少选择两款车型进行对比'
+                })
+            
+            # 获取车型数据
+            cars_data = []
+            for car_id in car_ids:
+                try:
+                    car = CarModel.objects.select_related('brand').get(id=car_id)
+                    
+                    # 获取该车型的二手车数据进行统计
+                    used_cars = UsedCar.objects.filter(car_model=car)
+                    
+                    # 计算平均价格
+                    avg_price = used_cars.aggregate(avg_price=Avg('price'))['avg_price'] or 0
+                    
+                    # 计算销量（这里用二手车数量模拟）
+                    sales_volume = used_cars.count()
+                    
+                    # 模拟性能评分（实际项目中应该从数据库获取）
+                    import random
+                    performance_scores = {
+                        'power': round(random.uniform(3.0, 5.0), 1),
+                        'handling': round(random.uniform(3.0, 5.0), 1),
+                        'comfort': round(random.uniform(3.0, 5.0), 1),
+                        'fuel_economy': round(random.uniform(3.0, 5.0), 1),
+                        'space': round(random.uniform(3.0, 5.0), 1)
+                    }
+                    
+                    # 模拟用户评分
+                    ratings = {
+                        'overall': round(random.uniform(3.5, 5.0), 1),
+                        'appearance': round(random.uniform(3.0, 5.0), 1),
+                        'interior': round(random.uniform(3.0, 5.0), 1),
+                        'configuration': round(random.uniform(3.0, 5.0), 1),
+                        'power': round(random.uniform(3.0, 5.0), 1),
+                        'handling': round(random.uniform(3.0, 5.0), 1),
+                        'fuel_economy': round(random.uniform(3.0, 5.0), 1),
+                        'comfort': round(random.uniform(3.0, 5.0), 1)
+                    }
+                    
+                    car_data = {
+                        'id': car.id,
+                        'name': f"{car.brand.name} {car.name}",
+                        'brand_name': car.brand.name,
+                        'price': f"{avg_price:.2f}万元" if avg_price else '-',
+                        'launch_date': '2023年',  # 模拟数据
+                        'sales_volume': f"{sales_volume}辆",
+                        'fuel_type': used_cars.first().fuel_type if used_cars.exists() else '-',
+                        'gearbox': used_cars.first().gearbox if used_cars.exists() else '-',
+                        'engine_displacement': '2.0L',  # 模拟数据
+                        'performance': performance_scores,
+                        'ratings': ratings
+                    }
+                    
+                    cars_data.append(car_data)
+                    
+                except CarModel.DoesNotExist:
+                    continue
+            
+            return JsonResponse({
+                'success': True,
+                'cars': cars_data
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': f'服务器错误: {str(e)}'
+            })
+    
+    return JsonResponse({
+        'success': False,
+        'error': '不支持的请求方法'
+    })
+
 def analysis_home(request):
     """分析首页"""
     return render(request, 'car_analysis/analysis_home.html')

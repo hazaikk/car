@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     "analysis_records",
     "analysis_results",
     "car_analysis",
+    "car_api",
     "visualization",
 ]
 

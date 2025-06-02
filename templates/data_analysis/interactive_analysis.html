@@ -863,7 +863,7 @@
         };
         
         // 发送导出请求
-        fetch('{% url "car_analysis:data_analysis:export_analysis" %}', {
+        fetch('{% url "data_analysis:export_analysis" %}', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

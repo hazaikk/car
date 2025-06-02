@@ -29,6 +29,45 @@
         transform: translateY(-5px);
         box-shadow: 0 5px 15px rgba(0,0,0,0.1);
     }
+    .filter-section {
+        background-color: #f8f9fc;
+        border: 1px solid #e3e6f0;
+        border-radius: 0.35rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    .loading {
+        display: none;
+        text-align: center;
+        padding: 2rem;
+    }
+    .loading .spinner-border {
+        width: 3rem;
+        height: 3rem;
+    }
+    .stat-item {
+        text-align: center;
+        padding: 1rem;
+        background-color: #f8f9fc;
+        border-radius: 0.35rem;
+        margin-bottom: 1rem;
+    }
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #4e73df;
+    }
+    .stat-label {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+    .alert {
+        margin-bottom: 1rem;
+    }
+    #analysisResults {
+        display: none;
+    }
 </style>
 {% endblock %}
 
@@ -38,142 +77,219 @@
         <div class="card">
             <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">品牌分析</h5>
-                <a href="{% url 'car_analysis:data_analysis:brand_analysis' %}?type={{ analysis_type }}&refresh=true" class="btn btn-light btn-sm">
-                    <i class="fas fa-sync-alt"></i> 刷新分析
-                </a>
+                <div>
+                    <a href="http://127.0.0.1:8000/car_analysis/data/" class="btn btn-light btn-sm me-2">
+                        <i class="fas fa-arrow-left"></i> 返回数据分析
+                    </a>
+                    <button id="refreshBtn" class="btn btn-light btn-sm me-2">
+                        <i class="fas fa-sync-alt"></i> 刷新分析
+                    </button>
+
+                    <button id="exportImageBtn" class="btn btn-info btn-sm" style="color: white;">
+                        <i class="fas fa-image"></i> 导出图片
+                    </button>
+                </div>
             </div>
             <div class="card-body">
+                <!-- 筛选条件 -->
+                <div class="filter-section">
+                    <h6 class="mb-3"><i class="fas fa-filter"></i> 筛选条件</h6>
+                    <form id="filterForm">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <label for="brandFilter" class="form-label">品牌</label>
+                                <div class="mb-2">
+                                    <input type="checkbox" id="selectAllBrands" class="form-check-input me-1">
+                                    <label for="selectAllBrands" class="form-check-label">全选/取消全选</label>
+                                </div>
+                                <select id="brandFilter" class="form-select" multiple size="4">
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="regionFilter" class="form-label">地区</label>
+                                <div class="mb-2">
+                                    <input type="checkbox" id="selectAllRegions" class="form-check-input me-1">
+                                    <label for="selectAllRegions" class="form-check-label">全选/取消全选</label>
+                                </div>
+                                <select id="regionFilter" class="form-select" multiple size="4">
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="fuelTypeFilter" class="form-label">燃料类型</label>
+                                <div class="mb-2">
+                                    <input type="checkbox" id="selectAllFuelTypes" class="form-check-input me-1">
+                                    <label for="selectAllFuelTypes" class="form-check-label">全选/取消全选</label>
+                                </div>
+                                <select id="fuelTypeFilter" class="form-select" multiple size="4">
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">上牌日期范围</label>
+                                <div class="mb-2">
+                                    <input type="date" id="dateFrom" class="form-control" placeholder="开始日期">
+                                </div>
+                                <div>
+                                    <input type="date" id="dateTo" class="form-control" placeholder="结束日期">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <label for="priceRange" class="form-label">价格范围(万元)</label>
+                                <div class="input-group">
+                                    <input type="number" id="minPrice" class="form-control" placeholder="最低价">
+                                    <span class="input-group-text">-</span>
+                                    <input type="number" id="maxPrice" class="form-control" placeholder="最高价">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="mileageRange" class="form-label">里程范围(万公里)</label>
+                                <div class="input-group">
+                                    <input type="number" id="minMileage" class="form-control" placeholder="最低里程">
+                                    <span class="input-group-text">-</span>
+                                    <input type="number" id="maxMileage" class="form-control" placeholder="最高里程">
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                
                 <div class="row mb-4">
                     <div class="col-12">
                         <div class="btn-group d-flex flex-wrap" role="group">
-                            <a href="{% url 'car_analysis:data_analysis:brand_analysis' %}?type=brand_popularity" class="btn btn-outline-primary analysis-type-btn {% if analysis_type == 'brand_popularity' %}active{% endif %}">
+                            <button type="button" class="btn btn-outline-primary analysis-type-btn active" data-type="brand_popularity">
                                 <i class="fas fa-star"></i> 品牌流行度分析
-                            </a>
-                            <a href="{% url 'car_analysis:data_analysis:brand_analysis' %}?type=brand_price_range" class="btn btn-outline-primary analysis-type-btn {% if analysis_type == 'brand_price_range' %}active{% endif %}">
+                            </button>
+                            <button type="button" class="btn btn-outline-primary analysis-type-btn" data-type="brand_price_range">
                                 <i class="fas fa-dollar-sign"></i> 品牌价格区间分析
-                            </a>
-                            <a href="{% url 'car_analysis:data_analysis:brand_analysis' %}?type=brand_region_distribution" class="btn btn-outline-primary analysis-type-btn {% if analysis_type == 'brand_region_distribution' %}active{% endif %}">
+                            </button>
+                            <button type="button" class="btn btn-outline-primary analysis-type-btn" data-type="brand_region_distribution">
                                 <i class="fas fa-map-marked-alt"></i> 品牌地区分布分析
-                            </a>
+                            </button>
                         </div>
                     </div>
                 </div>
                 
-                {% if analysis %}
-                <div class="row mb-4">
-                    <div class="col-12">
-                        <div class="summary-card">
-                            <h5>分析摘要</h5>
-                            <p>{{ analysis.summary }}</p>
-                        </div>
+                <!-- 加载指示器 -->
+                <div id="loading" class="loading">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">加载中...</span>
                     </div>
+                    <p class="mt-2">正在分析数据，请稍候...</p>
                 </div>
                 
-                <div class="row">
-                    <div class="col-lg-8">
-                        <div class="card mb-4">
-                            <div class="card-header">
-                                <h6 class="m-0 font-weight-bold text-primary">{{ analysis.get_analysis_type_display }} 图表</h6>
+                <!-- 无数据提示 -->
+                <div id="noDataAlert" class="alert alert-warning" style="display: none;">
+                    <i class="fas fa-exclamation-triangle"></i> 没有找到符合条件的数据，请调整筛选条件后重试。
+                </div>
+                
+                <!-- 错误提示 -->
+                <div id="errorAlert" class="alert alert-danger" style="display: none;">
+                    <i class="fas fa-exclamation-circle"></i> <span id="errorMessage">数据加载失败，请稍后重试。</span>
+                </div>
+                
+                <!-- 分析结果 -->
+                <div id="analysisResults" style="display: none;">
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="summary-card">
+                                <h5>分析摘要</h5>
+                                <p id="analysisSummary"></p>
                             </div>
-                            <div class="card-body">
-                                <div class="chart-container">
-                                    <canvas id="brandAnalysisChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-lg-8">
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h6 class="m-0 font-weight-bold text-primary" id="chartTitle">品牌分析图表</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="chart-container">
+                                        <canvas id="brandAnalysisChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-4">
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h6 class="m-0 font-weight-bold text-primary">统计数据</h6>
+                                </div>
+                                <div class="card-body" id="statsContainer">
+                                    <!-- 统计数据将通过JavaScript动态填充 -->
                                 </div>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="col-lg-4">
-                        <div class="card mb-4">
-                            <div class="card-header">
-                                <h6 class="m-0 font-weight-bold text-primary">品牌排名</h6>
-                            </div>
-                            <div class="card-body">
-                                <div id="brandRanking">
-                                    <!-- 品牌排名将通过JavaScript动态填充 -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h6 class="m-0 font-weight-bold text-primary">详细数据</h6>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                {% if analysis_type == 'brand_popularity' %}
-                <div class="row">
-                    <div class="col-12">
-                        <div class="card mb-4">
-                            <div class="card-header">
-                                <h6 class="m-0 font-weight-bold text-primary">热门品牌</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="row" id="popularBrands">
-                                    <!-- 热门品牌卡片将通过JavaScript动态填充 -->
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
-                
-                {% if analysis_type == 'brand_price_range' %}
-                <div class="row">
-                    <div class="col-12">
-                        <div class="card mb-4">
-                            <div class="card-header">
-                                <h6 class="m-0 font-weight-bold text-primary">品牌价格区间分布</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="chart-container">
-                                    <canvas id="priceRangeChart"></canvas>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
-                
-                {% if analysis_type == 'brand_region_distribution' %}
-                <div class="row">
-                    <div class="col-12">
-                        <div class="card mb-4">
-                            <div class="card-header">
-                                <h6 class="m-0 font-weight-bold text-primary">品牌地区分布热力图</h6>
-                            </div>
-                            <div class="card-body">
-                                <div id="regionHeatmap" style="height: 500px;">
-                                    <!-- 地区热力图将通过JavaScript动态填充 -->
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
-                
-                <div class="row">
-                    <div class="col-12">
-                        <div class="card mb-4">
-                            <div class="card-header">
-                                <h6 class="m-0 font-weight-bold text-primary">详细数据</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="table-responsive">
-                                    <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
-                                        <thead id="tableHead">
-                                            <!-- 表头将通过JavaScript动态填充 -->
-                                        </thead>
-                                        <tbody id="tableBody">
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-bordered" id="dataTable">
                                             <!-- 表格数据将通过JavaScript动态填充 -->
-                                        </tbody>
-                                    </table>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 热门品牌区域 -->
+                    <div class="row" id="popularBrandsSection" style="display: none;">
+                        <div class="col-12">
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h6 class="m-0 font-weight-bold text-primary">热门品牌</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row" id="popularBrands">
+                                        <!-- 热门品牌卡片将通过JavaScript动态填充 -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 品牌价格区间分布区域 -->
+                    <div class="row" id="priceRangeSection" style="display: none;">
+                        <div class="col-12">
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h6 class="m-0 font-weight-bold text-primary">品牌价格区间分布</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="chart-container">
+                                        <canvas id="priceRangeChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 品牌地区分布热力图区域 -->
+                    <div class="row" id="regionHeatmapSection" style="display: none;">
+                        <div class="col-12">
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h6 class="m-0 font-weight-bold text-primary">品牌地区分布热力图</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div id="regionHeatmap" style="height: 500px;">
+                                        <!-- 地区热力图将通过JavaScript动态填充 -->
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                {% else %}
-                <div class="alert alert-warning">
-                    <i class="fas fa-exclamation-triangle"></i> 暂无分析数据，请点击"刷新分析"按钮生成分析结果。
-                </div>
-                {% endif %}
             </div>
         </div>
     </div>
@@ -181,203 +297,650 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        {% if analysis and analysis.result_data %}
-            const analysisData = {{ analysis.result_data|safe }};
-            const analysisType = "{{ analysis_type }}";
-            
-            // 渲染主图表
-            renderMainChart(analysisData, analysisType);
-            
-            // 渲染品牌排名
-            renderBrandRanking(analysisData, analysisType);
-            
-            // 渲染表格数据
-            renderTable(analysisData, analysisType);
-            
-            // 根据分析类型渲染特定内容
-            if (analysisType === 'brand_popularity') {
-                renderPopularBrands(analysisData);
-            } else if (analysisType === 'brand_price_range') {
-                renderPriceRangeChart(analysisData);
-            } else if (analysisType === 'brand_region_distribution') {
-                renderRegionHeatmap(analysisData);
-            }
-        {% endif %}
-    });
+    let currentChart = null;
+    let currentAnalysisType = 'brand_popularity';
     
-    function renderMainChart(data, type) {
-        const ctx = document.getElementById('brandAnalysisChart').getContext('2d');
-        
-        let labels = [];
-        let values = [];
-        let chartType = 'bar';
-        let chartTitle = '';
-        
-        if (type === 'brand_popularity') {
-            labels = data.brands;
-            values = data.car_counts;
-            chartTitle = '品牌车辆数量';
-        } else if (type === 'brand_price_range') {
-            labels = data.brands;
-            values = data.avg_prices;
-            chartTitle = '品牌平均价格(万元)';
-        } else if (type === 'brand_region_distribution') {
-            labels = data.top_brands;
-            values = data.region_counts;
-            chartType = 'radar';
-            chartTitle = '品牌地区分布';
-        }
-        
-        let chartConfig = {};
-        
-        if (chartType === 'radar') {
-            // 雷达图配置
-            const datasets = [];
-            for (let i = 0; i < data.top_brands.length; i++) {
-                const color = getRandomColor();
-                datasets.push({
-                    label: data.top_brands[i],
-                    data: data.region_data[i],
-                    backgroundColor: color.replace(')', ', 0.2)').replace('rgb', 'rgba'),
-                    borderColor: color,
-                    pointBackgroundColor: color,
-                    pointBorderColor: '#fff',
-                    pointHoverBackgroundColor: '#fff',
-                    pointHoverBorderColor: color
-                });
-            }
-            
-            chartConfig = {
-                type: 'radar',
-                data: {
-                    labels: data.regions,
-                    datasets: datasets
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    elements: {
-                        line: {
-                            borderWidth: 2
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                        },
-                        title: {
-                            display: true,
-                            text: '品牌地区分布雷达图'
-                        }
-                    }
-                }
-            };
-        } else {
-            // 柱状图配置
-            chartConfig = {
-                type: chartType,
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: chartTitle,
-                        data: values,
-                        backgroundColor: 'rgba(78, 115, 223, 0.5)',
-                        borderColor: 'rgba(78, 115, 223, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: type === 'brand_popularity' ? '车辆数量' : '价格(万元)'
-                            }
-                        },
-                        x: {
-                            title: {
-                                display: true,
-                                text: '品牌'
-                            }
-                        }
-                    },
-                    plugins: {
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    if (type === 'brand_popularity') {
-                                        return `${context.dataset.label}: ${context.parsed.y}辆`;
-                                    } else {
-                                        return `${context.dataset.label}: ${context.parsed.y.toFixed(2)}万元`;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            };
-        }
-        
-        new Chart(ctx, chartConfig);
+    // 更新全选复选框状态的函数
+    function updateSelectAllCheckbox(selectElement, checkboxElement) {
+        const totalOptions = selectElement.options.length;
+        const selectedOptions = selectElement.selectedOptions.length;
+        checkboxElement.checked = selectedOptions === totalOptions;
+        checkboxElement.indeterminate = selectedOptions > 0 && selectedOptions < totalOptions;
     }
     
-    function renderBrandRanking(data, type) {
-        const rankingContainer = document.getElementById('brandRanking');
-        let rankingHTML = '<ol class="list-group list-group-numbered">';
+    document.addEventListener('DOMContentLoaded', function() {
+        // 初始化事件监听器
+        initializeEventListeners();
         
-        if (type === 'brand_popularity') {
-            for (let i = 0; i < Math.min(data.brands.length, 10); i++) {
-                rankingHTML += `
-                    <li class="list-group-item d-flex justify-content-between align-items-start">
-                        <div class="ms-2 me-auto">
-                            <div class="fw-bold">${data.brands[i]}</div>
-                        </div>
-                        <span class="badge bg-primary rounded-pill">${data.car_counts[i]}辆</span>
-                    </li>
-                `;
+        // 加载筛选选项，完成后再加载数据
+        loadFilterOptions().then(() => {
+            // 筛选选项加载完成后再加载分析数据
+            loadAnalysisData();
+        }).catch(error => {
+            console.error('初始化失败:', error);
+            showErrorAlert('初始化失败，请刷新页面重试');
+        });
+    });
+    
+    function initializeEventListeners() {
+        // 分析类型按钮
+        document.querySelectorAll('.analysis-type-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                // 更新按钮状态
+                document.querySelectorAll('.analysis-type-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                
+                // 更新分析类型
+                currentAnalysisType = this.dataset.type;
+                
+                // 重新加载数据
+                loadAnalysisData();
+            });
+        });
+        
+        // 刷新按钮
+        document.getElementById('refreshBtn').addEventListener('click', function() {
+            loadAnalysisData();
+        });
+        
+
+        
+        // 导出图片按钮事件
+        document.getElementById('exportImageBtn').addEventListener('click', exportToImage);
+        
+        // 全选/取消全选功能
+        document.getElementById('selectAllBrands').addEventListener('change', function() {
+            const brandSelect = document.getElementById('brandFilter');
+            const options = brandSelect.options;
+            for (let i = 0; i < options.length; i++) {
+                options[i].selected = this.checked;
             }
-        } else if (type === 'brand_price_range') {
-            // 按价格排序
-            const brandPrices = data.brands.map((brand, i) => ({ brand, price: data.avg_prices[i] }));
-            brandPrices.sort((a, b) => b.price - a.price);
-            
-            for (let i = 0; i < Math.min(brandPrices.length, 10); i++) {
-                rankingHTML += `
-                    <li class="list-group-item d-flex justify-content-between align-items-start">
-                        <div class="ms-2 me-auto">
-                            <div class="fw-bold">${brandPrices[i].brand}</div>
-                        </div>
-                        <span class="badge bg-success rounded-pill">${brandPrices[i].price.toFixed(2)}万元</span>
-                    </li>
-                `;
+            loadAnalysisData();
+        });
+        
+        document.getElementById('selectAllRegions').addEventListener('change', function() {
+            const regionSelect = document.getElementById('regionFilter');
+            const options = regionSelect.options;
+            for (let i = 0; i < options.length; i++) {
+                options[i].selected = this.checked;
             }
-        } else if (type === 'brand_region_distribution') {
-            // 按地区覆盖率排序
-            const brandCoverage = data.top_brands.map((brand, i) => ({ 
-                brand, 
-                coverage: data.region_coverage[i] 
-            }));
-            brandCoverage.sort((a, b) => b.coverage - a.coverage);
+            loadAnalysisData();
+        });
+        
+        document.getElementById('selectAllFuelTypes').addEventListener('change', function() {
+            const fuelTypeSelect = document.getElementById('fuelTypeFilter');
+            const options = fuelTypeSelect.options;
+            for (let i = 0; i < options.length; i++) {
+                options[i].selected = this.checked;
+            }
+            loadAnalysisData();
+        });
+        
+        // 多选框变化监听
+        document.getElementById('brandFilter').addEventListener('change', function() {
+            updateSelectAllCheckbox('brandFilter', 'selectAllBrands');
+            loadAnalysisData();
+        });
+        
+        document.getElementById('regionFilter').addEventListener('change', function() {
+            updateSelectAllCheckbox('regionFilter', 'selectAllRegions');
+            loadAnalysisData();
+        });
+        
+        document.getElementById('fuelTypeFilter').addEventListener('change', function() {
+            updateSelectAllCheckbox('fuelTypeFilter', 'selectAllFuelTypes');
+            loadAnalysisData();
+        });
+        
+        // 其他筛选条件变化
+        ['dateFrom', 'dateTo', 'minPrice', 'maxPrice', 'minMileage', 'maxMileage'].forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('change', function() {
+                    loadAnalysisData();
+                });
+            }
+        });
+    }
+    
+    function loadFilterOptions() {
+        return fetch('{% url "data_analysis:get_filter_options" %}')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const filterData = data.data;
+                
+                // 填充品牌选项
+                const brandSelect = document.getElementById('brandFilter');
+                brandSelect.innerHTML = '';
+                filterData.brands.forEach(brand => {
+                    const option = document.createElement('option');
+                    option.value = brand.name;
+                    option.textContent = brand.name;
+                    option.selected = true; // 默认全选
+                    brandSelect.appendChild(option);
+                });
+                
+                // 填充地区选项
+                const regionSelect = document.getElementById('regionFilter');
+                regionSelect.innerHTML = '';
+                filterData.regions.forEach(region => {
+                    const option = document.createElement('option');
+                    option.value = region.name;
+                    option.textContent = region.name;
+                    option.selected = true; // 默认全选
+                    regionSelect.appendChild(option);
+                });
+                
+                // 填充燃料类型选项
+                const fuelTypeSelect = document.getElementById('fuelTypeFilter');
+                fuelTypeSelect.innerHTML = '';
+                filterData.fuel_types.forEach(fuelType => {
+                    const option = document.createElement('option');
+                    option.value = fuelType.name;
+                    option.textContent = fuelType.name;
+                    option.selected = true; // 默认全选
+                    fuelTypeSelect.appendChild(option);
+                });
+                
+                // 设置全选复选框状态
+                document.getElementById('selectAllBrands').checked = true;
+                document.getElementById('selectAllRegions').checked = true;
+                document.getElementById('selectAllFuelTypes').checked = true;
+                
+                // 设置价格和里程范围提示
+                const minPriceInput = document.getElementById('minPrice');
+                const maxPriceInput = document.getElementById('maxPrice');
+                if (minPriceInput && maxPriceInput) {
+                    minPriceInput.placeholder = `最低价格 (${filterData.price_range.min}万)`;
+                    maxPriceInput.placeholder = `最高价格 (${filterData.price_range.max}万)`;
+                }
+                
+                const minMileageInput = document.getElementById('minMileage');
+                const maxMileageInput = document.getElementById('maxMileage');
+                if (minMileageInput && maxMileageInput) {
+                    minMileageInput.placeholder = `最低里程 (${filterData.mileage_range.min}万公里)`;
+                    maxMileageInput.placeholder = `最高里程 (${filterData.mileage_range.max}万公里)`;
+                }
+                
+                return Promise.resolve();
+            } else {
+                console.error('加载筛选选项失败:', data.error);
+                return Promise.reject(new Error('加载筛选选项失败: ' + (data.error || '未知错误')));
+            }
+        })
+        .catch(error => {
+            console.error('加载筛选选项时发生错误:', error);
+            return Promise.reject(error);
+        });
+    }
+    
+    function loadAnalysisData() {
+        showLoading();
+        hideAlerts();
+        
+        // 获取多选的品牌
+        const brandSelect = document.getElementById('brandFilter');
+        const selectedBrands = Array.from(brandSelect.selectedOptions).map(option => option.value);
+        
+        // 获取多选的地区
+        const regionSelect = document.getElementById('regionFilter');
+        const selectedRegions = Array.from(regionSelect.selectedOptions).map(option => option.value);
+        
+        // 获取多选的燃料类型
+        const fuelTypeSelect = document.getElementById('fuelTypeFilter');
+        const selectedFuelTypes = Array.from(fuelTypeSelect.selectedOptions).map(option => option.value);
+        
+        // 检查是否选择了品牌和地区
+        if (selectedBrands.length === 0) {
+            hideLoading();
+            showErrorAlert('请至少选择一个品牌');
+            return;
+        }
+        
+        if (selectedRegions.length === 0) {
+            hideLoading();
+            showErrorAlert('请至少选择一个地区');
+            return;
+        }
+        
+        // 构建URL参数
+        const params = new URLSearchParams();
+        params.append('type', currentAnalysisType);
+        
+        // 添加多选参数
+        selectedBrands.forEach(brand => params.append('brands', brand));
+        selectedRegions.forEach(region => params.append('regions', region));
+        selectedFuelTypes.forEach(fuelType => params.append('fuel_types', fuelType));
+        
+        // 添加日期范围
+        const dateFrom = document.getElementById('dateFrom').value;
+        const dateTo = document.getElementById('dateTo').value;
+        if (dateFrom) params.append('registration_date_from', dateFrom);
+        if (dateTo) params.append('registration_date_to', dateTo);
+        
+        // 添加价格和里程范围
+        const minPrice = document.getElementById('minPrice').value;
+        const maxPrice = document.getElementById('maxPrice').value;
+        const minMileage = document.getElementById('minMileage').value;
+        const maxMileage = document.getElementById('maxMileage').value;
+        
+        if (minPrice) params.append('min_price', minPrice);
+        if (maxPrice) params.append('max_price', maxPrice);
+        if (minMileage) params.append('min_mileage', minMileage);
+        if (maxMileage) params.append('max_mileage', maxMileage);
+        
+        fetch(`{% url "data_analysis:brand_analysis_data" %}?${params.toString()}`, {
+            method: 'GET'
+        })
+        .then(response => response.json())
+        .then(data => {
+            hideLoading();
             
-            for (let i = 0; i < Math.min(brandCoverage.length, 10); i++) {
-                rankingHTML += `
-                    <li class="list-group-item d-flex justify-content-between align-items-start">
-                        <div class="ms-2 me-auto">
-                            <div class="fw-bold">${brandCoverage[i].brand}</div>
-                        </div>
-                        <span class="badge bg-info rounded-pill">${(brandCoverage[i].coverage * 100).toFixed(1)}%</span>
-                    </li>
+            if (data && data.labels && data.labels.length > 0) {
+                showAnalysisResults(data);
+            } else if (data && data.error) {
+                showErrorAlert(data.error);
+            } else {
+                showNoDataAlert();
+            }
+        })
+        .catch(error => {
+            hideLoading();
+            console.error('Error:', error);
+            showErrorAlert('网络错误，请稍后重试');
+        });
+    }
+    
+    function showLoading() {
+        document.getElementById('loading').style.display = 'block';
+        document.getElementById('analysisResults').style.display = 'none';
+    }
+    
+    function hideLoading() {
+        document.getElementById('loading').style.display = 'none';
+    }
+    
+    function hideAlerts() {
+        document.getElementById('noDataAlert').style.display = 'none';
+        document.getElementById('errorAlert').style.display = 'none';
+    }
+    
+    function showAnalysisResults(data) {
+        document.getElementById('analysisResults').style.display = 'block';
+        
+        // 隐藏所有特殊区域
+        document.getElementById('popularBrandsSection').style.display = 'none';
+        document.getElementById('priceRangeSection').style.display = 'none';
+        document.getElementById('regionHeatmapSection').style.display = 'none';
+        
+        // 根据分析类型显示对应区域
+        if (currentAnalysisType === 'brand_popularity') {
+            document.getElementById('popularBrandsSection').style.display = 'block';
+            renderPopularBrands(data);
+        } else if (currentAnalysisType === 'brand_price_range') {
+            document.getElementById('priceRangeSection').style.display = 'block';
+            renderPriceRangeChart(data);
+        } else if (currentAnalysisType === 'brand_region_distribution') {
+            document.getElementById('regionHeatmapSection').style.display = 'block';
+            renderRegionHeatmap(data);
+        }
+        
+        // 渲染图表
+        renderChart(data);
+        
+        // 渲染统计数据
+        renderStats(data);
+        
+        // 渲染表格
+        renderTable(data);
+        
+        // 更新摘要
+        updateSummary(data);
+    }
+    
+    function showNoDataAlert() {
+        document.getElementById('noDataAlert').style.display = 'block';
+    }
+    
+    function showErrorAlert(message) {
+        document.getElementById('errorMessage').textContent = message;
+        document.getElementById('errorAlert').style.display = 'block';
+    }
+    
+    function exportToExcel() {
+        const formData = new FormData();
+        formData.append('analysis_type', currentAnalysisType);
+        formData.append('export', 'excel');
+        
+        // 添加筛选条件
+        const brand = document.getElementById('brandFilter').value;
+        const region = document.getElementById('regionFilter').value;
+        const year = document.getElementById('yearFilter').value;
+        const minPrice = document.getElementById('minPrice').value;
+        const maxPrice = document.getElementById('maxPrice').value;
+        
+        if (brand) formData.append('brand', brand);
+        if (region) formData.append('region', region);
+        if (year) formData.append('year', year);
+        if (minPrice) formData.append('min_price', minPrice);
+        if (maxPrice) formData.append('max_price', maxPrice);
+        
+        fetch('{% url "data_analysis:brand_analysis_data" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.blob();
+            }
+            throw new Error('导出失败');
+        })
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = `品牌分析_${currentAnalysisType}_${new Date().toISOString().split('T')[0]}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        })
+        .catch(error => {
+            console.error('Export error:', error);
+            alert('导出失败，请稍后重试');
+        });
+    }
+    
+    function exportToImage() {
+        const chartCanvas = document.querySelector('#chartContainer canvas');
+        if (!chartCanvas) {
+            alert('没有可导出的图表');
+            return;
+        }
+        
+        const link = document.createElement('a');
+        link.download = `品牌分析_${currentAnalysisType}_${new Date().toISOString().split('T')[0]}.png`;
+        link.href = chartCanvas.toDataURL('image/png');
+        link.click();
+    }
+    
+    function renderChart(data) {
+        const ctx = document.getElementById('brandAnalysisChart').getContext('2d');
+        
+        // 销毁现有图表
+        if (currentChart) {
+            currentChart.destroy();
+        }
+        
+        let chartConfig = {
+            type: getChartType(currentAnalysisType),
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: getDatasetLabel(currentAnalysisType),
+                    data: data.values,
+                    backgroundColor: getChartColors(currentAnalysisType, data.labels.length),
+                    borderColor: getBorderColors(currentAnalysisType, data.labels.length),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: getChartTitle(currentAnalysisType)
+                    },
+                    legend: {
+                        display: true
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return getTooltipLabel(context, currentAnalysisType);
+                            }
+                        }
+                    }
+                },
+                scales: getChartScales(currentAnalysisType)
+            }
+        };
+        
+        currentChart = new Chart(ctx, chartConfig);
+    }
+    
+    function getChartType(analysisType) {
+        switch(analysisType) {
+            case 'brand_popularity':
+                return 'pie';
+            case 'brand_price_range':
+            case 'brand_region_distribution':
+                return 'bar';
+            default:
+                return 'bar';
+        }
+    }
+    
+    function getDatasetLabel(analysisType) {
+        switch(analysisType) {
+            case 'brand_popularity':
+                return '车辆数量';
+            case 'brand_price_range':
+                return '平均价格';
+            case 'brand_region_distribution':
+                return '车辆数量';
+            default:
+                return '数量';
+        }
+    }
+    
+    function getChartColors(analysisType, count) {
+        if (analysisType === 'brand_popularity') {
+            const colors = [
+                'rgba(255, 99, 132, 0.8)',
+                'rgba(54, 162, 235, 0.8)',
+                'rgba(255, 205, 86, 0.8)',
+                'rgba(75, 192, 192, 0.8)',
+                'rgba(153, 102, 255, 0.8)',
+                'rgba(255, 159, 64, 0.8)',
+                'rgba(199, 199, 199, 0.8)',
+                'rgba(83, 102, 255, 0.8)'
+            ];
+            return colors.slice(0, count);
+        }
+        return 'rgba(54, 162, 235, 0.8)';
+    }
+    
+    function getBorderColors(analysisType, count) {
+        if (analysisType === 'brand_popularity') {
+            const colors = [
+                'rgba(255, 99, 132, 1)',
+                'rgba(54, 162, 235, 1)',
+                'rgba(255, 205, 86, 1)',
+                'rgba(75, 192, 192, 1)',
+                'rgba(153, 102, 255, 1)',
+                'rgba(255, 159, 64, 1)',
+                'rgba(199, 199, 199, 1)',
+                'rgba(83, 102, 255, 1)'
+            ];
+            return colors.slice(0, count);
+        }
+        return 'rgba(54, 162, 235, 1)';
+    }
+    
+    function getChartScales(analysisType) {
+        if (analysisType === 'brand_popularity') {
+            return {}; // 饼图不需要坐标轴
+        }
+        return {
+            y: {
+                beginAtZero: true,
+                title: {
+                    display: true,
+                    text: analysisType === 'brand_price_range' ? '价格(万元)' : '数量'
+                }
+            },
+            x: {
+                title: {
+                    display: true,
+                    text: '品牌'
+                }
+            }
+        };
+    }
+    
+    function getChartTitle(analysisType) {
+        switch(analysisType) {
+            case 'brand_popularity':
+                return '品牌流行度分析';
+            case 'brand_price_range':
+                return '品牌价格区间分析';
+            case 'brand_region_distribution':
+                return '品牌地区分布分析';
+            default:
+                return '品牌分析';
+        }
+    }
+    
+    function getTooltipLabel(context, analysisType) {
+        const label = context.label || '';
+        const value = context.parsed || context.parsed.y || 0;
+        
+        switch(analysisType) {
+            case 'brand_popularity':
+                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                const percentage = ((value / total) * 100).toFixed(1);
+                return `${label}: ${value} (${percentage}%)`;
+            case 'brand_price_range':
+                return `${label}: ${value.toFixed(2)}万元`;
+            default:
+                return `${label}: ${value}`;
+        }
+    }
+    
+    function renderStats(data) {
+        const container = document.getElementById('statsContainer');
+        let html = '';
+        
+        if (data.stats && data.stats.length > 0) {
+            // 使用后端提供的统计数据
+            data.stats.forEach(stat => {
+                html += `
+                    <div class="stat-item">
+                        <div class="stat-value">${stat.value}</div>
+                        <div class="stat-label">${stat.label}</div>
+                        ${stat.description ? `<div class="stat-desc">${stat.description}</div>` : ''}
+                    </div>
                 `;
+            });
+        } else if (data.labels && data.values) {
+            // 根据分析类型生成基本统计
+            const total = data.values.reduce((a, b) => a + b, 0);
+            const max = Math.max(...data.values);
+            const min = Math.min(...data.values);
+            const maxIndex = data.values.indexOf(max);
+            const minIndex = data.values.indexOf(min);
+            
+            switch(currentAnalysisType) {
+                case 'brand_popularity':
+                    html += `
+                        <div class="stat-item">
+                            <div class="stat-value">${total}</div>
+                            <div class="stat-label">总车辆数</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${data.labels[maxIndex]}</div>
+                            <div class="stat-label">最受欢迎品牌</div>
+                            <div class="stat-desc">${max}辆 (${((max/total)*100).toFixed(1)}%)</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${data.labels.length}</div>
+                            <div class="stat-label">品牌数量</div>
+                        </div>
+                    `;
+                    break;
+                case 'brand_price_range':
+                    html += `
+                        <div class="stat-item">
+                            <div class="stat-value">${data.labels[maxIndex]}</div>
+                            <div class="stat-label">最高均价品牌</div>
+                            <div class="stat-desc">${max.toFixed(1)}万元</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${data.labels[minIndex]}</div>
+                            <div class="stat-label">最低均价品牌</div>
+                            <div class="stat-desc">${min.toFixed(1)}万元</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${(max - min).toFixed(1)}</div>
+                            <div class="stat-label">价格差异(万元)</div>
+                        </div>
+                    `;
+                    break;
+                case 'brand_region_distribution':
+                    html += `
+                        <div class="stat-item">
+                            <div class="stat-value">${data.labels[maxIndex]}</div>
+                            <div class="stat-label">分布最广品牌</div>
+                            <div class="stat-desc">${max}个地区</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${(total/data.labels.length).toFixed(1)}</div>
+                            <div class="stat-label">平均分布</div>
+                            <div class="stat-desc">个地区/品牌</div>
+                        </div>
+                    `;
+                    break;
             }
         }
         
-        rankingHTML += '</ol>';
-        rankingContainer.innerHTML = rankingHTML;
+        container.innerHTML = html;
+    }
+    
+    function updateSummary(data) {
+        const container = document.getElementById('analysisSummary');
+        let summary = '';
+        
+        // 确保data.summary是字符串类型
+        if (data.summary && typeof data.summary === 'string') {
+            summary = data.summary;
+        } else if (data.summary && typeof data.summary === 'object') {
+            // 如果summary是对象，尝试转换为字符串
+            summary = JSON.stringify(data.summary);
+        } else {
+            // 生成默认摘要
+            const total = data.values ? data.values.reduce((a, b) => a + b, 0) : 0;
+            const brandCount = data.labels ? data.labels.length : 0;
+            
+            switch(currentAnalysisType) {
+                case 'brand_popularity':
+                    summary = `共分析了${brandCount}个品牌，总计${total}辆车。${data.labels && data.labels[0] ? data.labels[0] : ''}是最受欢迎的品牌。`;
+                    break;
+                case 'brand_price_range':
+                    summary = `分析了${brandCount}个品牌的价格区间，价格差异较大，为消费者提供了多样化的选择。`;
+                    break;
+                case 'brand_region_distribution':
+                    summary = `${brandCount}个品牌在各地区的分布情况，显示了不同品牌的市场覆盖范围。`;
+                    break;
+                default:
+                    summary = `品牌分析完成，共包含${brandCount}个品牌的数据。`;
+            }
+        }
+        
+        // 确保summary是字符串再设置innerHTML
+        if (typeof summary === 'string') {
+            container.innerHTML = `<p>${summary}</p>`;
+        } else {
+            container.innerHTML = '<p>分析摘要加载中...</p>';
+        }
     }
     
     function renderPopularBrands(data) {
@@ -506,54 +1069,90 @@
         heatmapContainer.innerHTML = heatmapHTML;
     }
     
-    function renderTable(data, type) {
-        const tableHead = document.getElementById('tableHead');
-        const tableBody = document.getElementById('tableBody');
+    function renderTable(data) {
+        const table = document.getElementById('dataTable');
         
-        let headHTML = '<tr>';
-        let bodyHTML = '';
+        let tableHTML = '<thead><tr>';
+        let bodyHTML = '<tbody>';
         
-        if (type === 'brand_popularity') {
-            headHTML += '<th>品牌</th><th>车辆数量</th><th>占比</th><th>平均价格(万元)</th>';
+        if (data.table && data.table.headers && data.table.rows) {
+            // 使用后端提供的表格数据
+            data.table.headers.forEach(header => {
+                tableHTML += `<th>${header}</th>`;
+            });
+            tableHTML += '</tr></thead><tbody>';
             
-            for (let i = 0; i < data.brands.length; i++) {
-                const percentage = (data.car_counts[i] / data.total_cars * 100).toFixed(2);
-                bodyHTML += `<tr>
-                    <td>${data.brands[i]}</td>
-                    <td>${data.car_counts[i]}</td>
-                    <td>${percentage}%</td>
-                    <td>${data.avg_prices[i].toFixed(2)}</td>
-                </tr>`;
-            }
-        } else if (type === 'brand_price_range') {
-            headHTML += '<th>品牌</th><th>平均价格(万元)</th><th>最低价格(万元)</th><th>最高价格(万元)</th><th>价格区间(万元)</th>';
-            
-            for (let i = 0; i < data.brands.length; i++) {
-                const priceRange = data.max_prices[i] - data.min_prices[i];
-                bodyHTML += `<tr>
-                    <td>${data.brands[i]}</td>
-                    <td>${data.avg_prices[i].toFixed(2)}</td>
-                    <td>${data.min_prices[i].toFixed(2)}</td>
-                    <td>${data.max_prices[i].toFixed(2)}</td>
-                    <td>${priceRange.toFixed(2)}</td>
-                </tr>`;
-            }
-        } else if (type === 'brand_region_distribution') {
-            headHTML += '<th>品牌</th><th>覆盖地区数</th><th>地区覆盖率</th><th>主要地区</th>';
-            
-            for (let i = 0; i < data.top_brands.length; i++) {
-                bodyHTML += `<tr>
-                    <td>${data.top_brands[i]}</td>
-                    <td>${data.region_counts[i]}</td>
-                    <td>${(data.region_coverage[i] * 100).toFixed(2)}%</td>
-                    <td>${data.main_regions[i].join(', ')}</td>
-                </tr>`;
+            data.table.rows.forEach((row, index) => {
+                bodyHTML += '<tr>';
+                row.forEach(cell => {
+                    bodyHTML += `<td>${cell}</td>`;
+                });
+                bodyHTML += '</tr>';
+            });
+        } else if (data.labels && data.values) {
+            // 根据分析类型生成基本表格
+            switch(currentAnalysisType) {
+                case 'brand_popularity':
+                    tableHTML += '<th>排名</th><th>品牌</th><th>车辆数量</th><th>市场占比</th></tr></thead><tbody>';
+                    
+                    const total = data.values.reduce((a, b) => a + b, 0);
+                    data.labels.forEach((label, index) => {
+                        const percentage = ((data.values[index] / total) * 100).toFixed(2);
+                        bodyHTML += `<tr>
+                            <td>${index + 1}</td>
+                            <td><strong>${label}</strong></td>
+                            <td>${data.values[index]}辆</td>
+                            <td>${percentage}%</td>
+                        </tr>`;
+                    });
+                    break;
+                    
+                case 'brand_price_range':
+                    tableHTML += '<th>品牌</th><th>平均价格</th><th>价格等级</th></tr></thead><tbody>';
+                    
+                    data.labels.forEach((label, index) => {
+                        const price = data.values[index];
+                        let priceLevel = '经济型';
+                        if (price > 30) priceLevel = '豪华型';
+                        else if (price > 15) priceLevel = '中高端';
+                        else if (price > 8) priceLevel = '中端';
+                        
+                        bodyHTML += `<tr>
+                            <td><strong>${label}</strong></td>
+                            <td>${price.toFixed(2)}万元</td>
+                            <td>${priceLevel}</td>
+                        </tr>`;
+                    });
+                    break;
+                    
+                case 'brand_region_distribution':
+                    tableHTML += '<th>品牌</th><th>分布地区数</th><th>覆盖率</th></tr></thead><tbody>';
+                    
+                    const maxRegions = Math.max(...data.values);
+                    data.labels.forEach((label, index) => {
+                        const coverage = ((data.values[index] / maxRegions) * 100).toFixed(1);
+                        bodyHTML += `<tr>
+                            <td><strong>${label}</strong></td>
+                            <td>${data.values[index]}个</td>
+                            <td>${coverage}%</td>
+                        </tr>`;
+                    });
+                    break;
+                    
+                default:
+                    tableHTML += '<th>品牌</th><th>数值</th></tr></thead><tbody>';
+                    
+                    data.labels.forEach((label, index) => {
+                        bodyHTML += `<tr>
+                            <td><strong>${label}</strong></td>
+                            <td>${data.values[index]}</td>
+                        </tr>`;
+                    });
             }
         }
         
-        headHTML += '</tr>';
-        tableHead.innerHTML = headHTML;
-        tableBody.innerHTML = bodyHTML;
+        bodyHTML += '</tbody>';
+        table.innerHTML = tableHTML + bodyHTML;
     }
     
     function getRandomColor() {

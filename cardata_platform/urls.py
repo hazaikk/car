@@ -21,15 +21,14 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path('accounts/', include('accounts.urls')),  # 用户账户管理
+    path('accounts/', include('accounts.urls')),  # 自定义账户系统
     path('allauth/', include('allauth.urls')),  # allauth URLs
     path('', include('dashboard.urls')),  # 首页和仪表盘
     path('analysis/', include('data_analysis.urls')),  # 数据分析
     path('api/', include('api.urls')),  # API接口
     path('crawler/', include('crawler.urls')),  # 爬虫管理
-    path('visualization/', include('visualization.urls')),  # 可视化
+    path('visualization/', include('visualization.urls')),  # 数据可视化
     path('car_analysis/', include('car_analysis.urls')),  # 汽车分析
-    path('analysis_results/', include('analysis_results.urls')),  # 分析结果
     path('car_api/', include('car_api.urls')),  # 汽车API
 ]
 
