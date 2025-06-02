@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     "car_analysis",
     "car_api",
     "visualization",
+    "analysis",
 ]
 
 MIDDLEWARE = [
