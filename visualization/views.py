@@ -3,28 +3,43 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.contrib import messages
 from django.core.paginator import Paginator
+from django.db import models
 from django.db.models import Count, Avg, Min, Max, Q
 from django.db.models.functions import TruncMonth
 from django.views.decorators.http import require_http_methods
-from .models import Chart, Dashboard, DashboardChart
-from .forms import ChartForm, DashboardForm
+from .models import Chart
+from .forms import ChartForm
 from crawler.models import UsedCar
 import json
 from datetime import datetime, timedelta
 
 def chart_list(request):
     """显示所有公开的图表列表"""
-    charts = Chart.objects.filter(is_public=True).order_by('-created_at')
+    charts = Chart.objects.filter(is_public=True).select_related('created_by').order_by('-created_at')
+    
+    # 添加分页
+    paginator = Paginator(charts, 6)  # 每页显示6个图表
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
     return render(request, 'visualization/chart_list.html', {
-        'charts': charts
+        'charts': page_obj,
+        'page_obj': page_obj
     })
 
 @login_required
 def my_charts(request):
     """显示用户创建的图表"""
-    charts = Chart.objects.filter(created_by=request.user).order_by('-created_at')
+    charts = Chart.objects.filter(created_by=request.user).select_related('created_by').order_by('-created_at')
+    
+    # 添加分页
+    paginator = Paginator(charts, 6)  # 每页显示6个图表
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
     return render(request, 'visualization/my_charts.html', {
-        'charts': charts
+        'charts': page_obj,
+        'page_obj': page_obj
     })
 
 @login_required
@@ -175,7 +190,7 @@ def chart_data(request, chart_id):
     
     if chart.data_type == 'sales':
         # 销量数据 - 使用UsedCar模型统计车辆数量作为销量指标
-        used_cars = UsedCar.objects.all()
+        used_cars = UsedCar.objects.select_related('car_model__brand').all()
         # 日期筛选（基于首次上牌日期）
         if start_date:
             try:
@@ -194,7 +209,7 @@ def chart_data(request, chart_id):
             
         if chart.chart_type == 'line':
             # 智能选择时间粒度：检查数据的时间跨度
-            from django.db.models.functions import TruncMonth, TruncDay, TruncHour
+            from django.db.models.functions import TruncMonth, TruncDay, TruncYear
             from datetime import datetime, timedelta
             
             # 获取数据的时间范围（基于首次上牌日期）
@@ -345,10 +360,86 @@ def chart_data(request, chart_id):
                         'data': [41, 32, 30, 30, 29]
                     })
                     data['legend'] = data['labels']
+        
+        elif chart.chart_type == 'bar':
+            # 按品牌统计车辆数量（柱状图）
+            brand_sales = used_cars.values('car_model__brand__name').annotate(
+                count=Count('id')
+            ).order_by('-count')[:10]  # 取前10个品牌
+            
+            if brand_sales and len(brand_sales) > 0:
+                valid_brands = [item for item in brand_sales if item['count'] > 0]
+                if valid_brands:
+                    data['labels'] = [item['car_model__brand__name'] or '未知品牌' for item in valid_brands]
+                    data['datasets'].append({
+                        'label': '车辆数量',
+                        'data': [item['count'] for item in valid_brands]
+                    })
+                    data['legend'] = ['车辆数量']
+                else:
+                    # 提供示例数据
+                    data['labels'] = ['轩逸', '哈弗H6', 'MG6', 'MG5', '帝豪', '朗逸', '速腾', '卡罗拉']
+                    data['datasets'].append({
+                        'label': '车辆数量',
+                        'data': [41, 32, 30, 30, 29, 25, 22, 20]
+                    })
+                    data['legend'] = ['车辆数量']
+            else:
+                # 提供示例数据
+                data['labels'] = ['轩逸', '哈弗H6', 'MG6', 'MG5', '帝豪', '朗逸', '速腾', '卡罗拉']
+                data['datasets'].append({
+                    'label': '车辆数量',
+                    'data': [41, 32, 30, 30, 29, 25, 22, 20]
+                })
+                data['legend'] = ['车辆数量']
+        
+        elif chart.chart_type == 'radar':
+            # 销量相关指标雷达图
+            if used_cars.exists():
+                # 计算销量相关指标
+                total_count = used_cars.count()
+                
+                # 计算各品牌销量（取前5个品牌）
+                brand_sales = used_cars.values('car_model__brand__name').annotate(
+                    count=Count('id')
+                ).order_by('-count')[:5]
+                
+                if brand_sales and len(brand_sales) > 0:
+                    # 使用实际数据生成雷达图
+                    data['labels'] = ['市场占有率', '品牌多样性', '价格竞争力', '车型丰富度', '用户偏好']
+                    
+                    # 基于实际数据计算指标（归一化到1-5分）
+                    market_share = min(5, max(1, total_count / 50))  # 市场占有率
+                    brand_diversity = min(5, len(brand_sales))  # 品牌多样性
+                    price_competitiveness = 4.0  # 价格竞争力（固定值）
+                    model_variety = min(5, max(1, total_count / 30))  # 车型丰富度
+                    user_preference = 4.2  # 用户偏好（固定值）
+                    
+                    data['datasets'].append({
+                        'label': '销量指标',
+                        'data': [market_share, brand_diversity, price_competitiveness, model_variety, user_preference]
+                    })
+                    data['legend'] = ['销量指标']
+                else:
+                    # 提供示例数据
+                    data['labels'] = ['市场占有率', '品牌多样性', '价格竞争力', '车型丰富度', '用户偏好']
+                    data['datasets'].append({
+                        'label': '销量指标',
+                        'data': [3.8, 4.2, 4.0, 3.5, 4.1]
+                    })
+                    data['legend'] = ['销量指标']
+            else:
+                # 提供示例数据
+                data['labels'] = ['市场占有率', '品牌多样性', '价格竞争力', '车型丰富度', '用户偏好']
+                data['datasets'].append({
+                    'label': '销量指标',
+                    'data': [3.8, 4.2, 4.0, 3.5, 4.1]
+                })
+                data['legend'] = ['销量指标']
     
     elif chart.data_type == 'price':
         # 价格数据 - 使用UsedCar模型，参考data_analysis的实现
-        price_data = UsedCar.objects.exclude(price__isnull=True).exclude(price__lte=0)
+        price_data = UsedCar.objects.select_related('car_model__brand').exclude(price__isnull=True).exclude(price__lte=0)
         
         # 日期筛选（基于首次上牌日期）
         if start_date:
@@ -700,10 +791,133 @@ def chart_data(request, chart_id):
                     'data': [200, 350, 280, 150, 80]
                 })
                 data['legend'] = data['labels']
+        
+        elif chart.chart_type == 'scatter':
+            # 价格散点图：价格 vs 里程数
+            valid_price_data = price_data.exclude(price__isnull=True).exclude(price=0).exclude(mileage__isnull=True).exclude(mileage=0)
+            
+            if valid_price_data.exists():
+                # 获取价格和里程数据，限制数量避免过多数据点
+                scatter_data = valid_price_data.values('price', 'mileage', 'car_model__brand__name')[:200]
+                
+                if scatter_data:
+                    # 准备散点图数据
+                    data['datasets'] = []
+                    
+                    # 按品牌分组显示不同颜色的散点
+                    brands = {}
+                    for item in scatter_data:
+                        brand = item['car_model__brand__name'] or '未知品牌'
+                        if brand not in brands:
+                            brands[brand] = []
+                        brands[brand].append({
+                            'x': float(item['mileage']),
+                            'y': float(item['price'])
+                        })
+                    
+                    # 限制品牌数量，取前8个品牌
+                    sorted_brands = sorted(brands.items(), key=lambda x: len(x[1]), reverse=True)[:8]
+                    
+                    for brand, points in sorted_brands:
+                        data['datasets'].append({
+                            'label': brand,
+                            'data': points,
+                            'showLine': False,
+                            'pointRadius': 4,
+                            'pointHoverRadius': 6
+                        })
+                    
+                    data['legend'] = [brand for brand, _ in sorted_brands]
+                    data['xAxisLabel'] = '里程数(万公里)'
+                    data['yAxisLabel'] = '价格(万元)'
+                else:
+                    # 提供示例数据
+                    data['datasets'] = [{
+                        'label': '价格分布',
+                        'data': [
+                            {'x': 2.5, 'y': 15.8}, {'x': 4.2, 'y': 12.3}, {'x': 6.1, 'y': 9.7},
+                            {'x': 8.3, 'y': 7.2}, {'x': 10.5, 'y': 5.8}, {'x': 12.8, 'y': 4.5},
+                            {'x': 15.2, 'y': 3.2}, {'x': 18.6, 'y': 2.8}, {'x': 22.1, 'y': 2.1}
+                        ],
+                        'showLine': False,
+                        'pointRadius': 4,
+                        'pointHoverRadius': 6
+                    }]
+                    data['legend'] = ['价格分布']
+                    data['xAxisLabel'] = '里程数(万公里)'
+                    data['yAxisLabel'] = '价格(万元)'
+            else:
+                # 提供示例数据
+                data['datasets'] = [{
+                    'label': '价格分布',
+                    'data': [
+                        {'x': 2.5, 'y': 15.8}, {'x': 4.2, 'y': 12.3}, {'x': 6.1, 'y': 9.7},
+                        {'x': 8.3, 'y': 7.2}, {'x': 10.5, 'y': 5.8}, {'x': 12.8, 'y': 4.5},
+                        {'x': 15.2, 'y': 3.2}, {'x': 18.6, 'y': 2.8}, {'x': 22.1, 'y': 2.1}
+                    ],
+                    'showLine': False,
+                    'pointRadius': 4,
+                    'pointHoverRadius': 6
+                }]
+                data['legend'] = ['价格分布']
+                data['xAxisLabel'] = '里程数(万公里)'
+                data['yAxisLabel'] = '价格(万元)'
+        
+        elif chart.chart_type == 'radar':
+            # 价格相关指标雷达图
+            valid_price_data = price_data.exclude(price__isnull=True).exclude(price=0)
+            
+            if valid_price_data.exists():
+                # 计算价格相关指标
+                price_stats = valid_price_data.aggregate(
+                    avg_price=models.Avg('price'),
+                    min_price=models.Min('price'),
+                    max_price=models.Max('price')
+                )
+                
+                # 计算各品牌平均价格（取前5个品牌）
+                brand_prices = valid_price_data.values('car_model__brand__name').annotate(
+                    avg_price=models.Avg('price'),
+                    count=Count('id')
+                ).order_by('-count')[:5]
+                
+                if brand_prices and len(brand_prices) > 0:
+                    # 使用实际数据生成雷达图
+                    data['labels'] = ['价格竞争力', '市场占有率', '性价比', '保值率', '用户满意度']
+                    
+                    # 基于实际数据计算指标（归一化到1-5分）
+                    avg_price = float(price_stats['avg_price'] or 3)
+                    price_score = max(1, min(5, 6 - avg_price))  # 价格越低分数越高
+                    market_score = min(5, len(brand_prices))  # 品牌数量反映市场活跃度
+                    value_score = max(1, min(5, price_score * 0.8 + 1))  # 性价比
+                    retention_score = max(1, min(5, 4.5 - (avg_price - 2) * 0.3))  # 保值率
+                    satisfaction_score = max(1, min(5, 4.2))  # 用户满意度（固定值）
+                    
+                    data['datasets'].append({
+                        'label': '价格指标',
+                        'data': [price_score, market_score, value_score, retention_score, satisfaction_score]
+                    })
+                    data['legend'] = ['价格指标']
+                else:
+                    # 提供示例数据
+                    data['labels'] = ['价格竞争力', '市场占有率', '性价比', '保值率', '用户满意度']
+                    data['datasets'].append({
+                        'label': '价格指标',
+                        'data': [4.2, 3.8, 4.5, 4.0, 4.1]
+                    })
+                    data['legend'] = ['价格指标']
+            else:
+                # 提供示例数据
+                data['labels'] = ['价格竞争力', '市场占有率', '性价比', '保值率', '用户满意度']
+                data['datasets'].append({
+                    'label': '价格指标',
+                    'data': [4.2, 3.8, 4.5, 4.0, 4.1]
+                })
+                data['legend'] = ['价格指标']
     
     elif chart.data_type == 'rating':
         # 评分数据 - 由于UsedCar模型中没有评分字段，使用价格相关指标作为替代
-        car_data = UsedCar.objects.exclude(price__isnull=True).exclude(price__lte=0)
+        car_data = UsedCar.objects.select_related('car_model__brand').exclude(price__isnull=True).exclude(price__lte=0)
         if start_date:
             try:
                 start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
@@ -831,6 +1045,38 @@ def chart_data(request, chart_id):
                 'data': [4.2, 4.0, 4.5, 3.8, 4.1, 4.3]
             })
             data['legend'] = ['用户评分']
+        
+        elif chart.chart_type == 'bar':
+            # 按品牌统计车辆数量（柱状图）
+            brand_stats = car_data.values('car_model__brand__name').annotate(
+                count=Count('id')
+            ).order_by('-count')[:10]  # 取前10个品牌
+            
+            if brand_stats and len(brand_stats) > 0:
+                valid_brands = [item for item in brand_stats if item['count'] > 0]
+                if valid_brands:
+                    data['labels'] = [item['car_model__brand__name'] or '未知品牌' for item in valid_brands]
+                    data['datasets'].append({
+                        'label': '车辆数量',
+                        'data': [item['count'] for item in valid_brands]
+                    })
+                    data['legend'] = ['车辆数量']
+                else:
+                    # 提供示例数据
+                    data['labels'] = ['轩逸', '哈弗H6', 'MG6', 'MG5', '帝豪', '朗逸', '卡罗拉', '速腾']
+                    data['datasets'].append({
+                        'label': '车辆数量',
+                        'data': [41, 32, 30, 30, 29, 25, 22, 20]
+                    })
+                    data['legend'] = ['车辆数量']
+            else:
+                # 提供示例数据
+                data['labels'] = ['轩逸', '哈弗H6', 'MG6', 'MG5', '帝豪', '朗逸', '卡罗拉', '速腾']
+                data['datasets'].append({
+                    'label': '车辆数量',
+                    'data': [41, 32, 30, 30, 29, 25, 22, 20]
+                })
+                data['legend'] = ['车辆数量']
         
         elif chart.chart_type == 'line':
             # 基于上牌日期的价格趋势
@@ -1219,6 +1465,38 @@ def get_chart_data_for_preview(chart, request):
             })
             data['legend'] = ['用户评分']
         
+        elif chart.chart_type == 'bar':
+            # 按品牌统计车辆数量（柱状图）
+            brand_stats = car_data.values('car_model__brand__name').annotate(
+                count=Count('id')
+            ).order_by('-count')[:10]  # 取前10个品牌
+            
+            if brand_stats and len(brand_stats) > 0:
+                valid_brands = [item for item in brand_stats if item['count'] > 0]
+                if valid_brands:
+                    data['labels'] = [item['car_model__brand__name'] or '未知品牌' for item in valid_brands]
+                    data['datasets'].append({
+                        'label': '车辆数量',
+                        'data': [item['count'] for item in valid_brands]
+                    })
+                    data['legend'] = ['车辆数量']
+                else:
+                    # 提供示例数据
+                    data['labels'] = ['轩逸', '哈弗H6', 'MG6', 'MG5', '帝豪', '朗逸', '卡罗拉', '速腾']
+                    data['datasets'].append({
+                        'label': '车辆数量',
+                        'data': [41, 32, 30, 30, 29, 25, 22, 20]
+                    })
+                    data['legend'] = ['车辆数量']
+            else:
+                # 提供示例数据
+                data['labels'] = ['轩逸', '哈弗H6', 'MG6', 'MG5', '帝豪', '朗逸', '卡罗拉', '速腾']
+                data['datasets'].append({
+                    'label': '车辆数量',
+                    'data': [41, 32, 30, 30, 29, 25, 22, 20]
+                })
+                data['legend'] = ['车辆数量']
+        
         elif chart.chart_type == 'line':
             # 基于上牌日期的价格趋势
             valid_data = price_data.exclude(registration_date__isnull=True).exclude(price__isnull=True).exclude(price=0)
@@ -1304,77 +1582,14 @@ def get_chart_data_for_preview(chart, request):
     
     return data
 
-def dashboard_list(request):
-    """显示所有公开的仪表盘列表"""
-    dashboards = Dashboard.objects.filter(is_public=True).order_by('-created_at')
-    return render(request, 'visualization/dashboard_list.html', {
-        'dashboards': dashboards
-    })
 
-@login_required
-def my_dashboards(request):
-    """显示用户创建的仪表盘"""
-    dashboards = Dashboard.objects.filter(created_by=request.user).order_by('-created_at')
-    return render(request, 'visualization/my_dashboards.html', {
-        'dashboards': dashboards
-    })
-
-@login_required
-def dashboard_create(request):
-    """创建新仪表盘"""
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            dashboard = Dashboard.objects.create(
-                title=data['title'],
-                description=data.get('description'),
-                created_by=request.user,
-                is_public=data.get('is_public', True)
-            )
-            
-            # 添加图表到仪表盘
-            charts_data = data.get('charts', [])
-            for chart_data in charts_data:
-                DashboardChart.objects.create(
-                    dashboard=dashboard,
-                    chart_id=chart_data['chart_id'],
-                    position_x=chart_data.get('position_x', 0),
-                    position_y=chart_data.get('position_y', 0),
-                    width=chart_data.get('width', 6),
-                    height=chart_data.get('height', 4)
-                )
-            return JsonResponse({'success': True, 'dashboard_id': dashboard.id})
-        except Exception as e:
-            return JsonResponse({'success': False, 'error': str(e)})
-    
-    # 获取用户可用的图表
-    available_charts = Chart.objects.filter(
-        Q(is_public=True) | Q(created_by=request.user)
-    ).order_by('-created_at')
-    
-    return render(request, 'visualization/dashboard_create.html', {
-        'available_charts': available_charts
-    })
-
-def dashboard_detail(request, dashboard_id):
-    """查看仪表盘详情"""
-    dashboard = get_object_or_404(Dashboard, id=dashboard_id)
-    if not dashboard.is_public and (not request.user.is_authenticated or dashboard.created_by != request.user):
-        messages.error(request, '您没有权限查看此仪表盘')
-        return redirect('visualization:dashboard_list')
-    
-    dashboard_charts = DashboardChart.objects.filter(dashboard=dashboard).select_related('chart')
-    return render(request, 'visualization/dashboard_detail.html', {
-        'dashboard': dashboard,
-        'dashboard_charts': dashboard_charts
-    })
 
 @login_required
 def get_filter_options(request):
     """获取筛选选项数据API"""
     try:
         # 获取所有品牌（通过car_model关联获取）
-        brands = UsedCar.objects.exclude(car_model__brand__isnull=True).values_list('car_model__brand__name', flat=True).distinct().order_by('car_model__brand__name')
+        brands = UsedCar.objects.select_related('car_model__brand').exclude(car_model__brand__isnull=True).values_list('car_model__brand__name', flat=True).distinct().order_by('car_model__brand__name')
         brand_list = [{'name': brand} for brand in brands if brand]
         
         # 获取所有地区（去重）
@@ -1458,25 +1673,5 @@ def chart_delete(request):
         
     except json.JSONDecodeError:
         return JsonResponse({'success': False, 'error': '请求数据格式错误'})
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})
-
-@login_required
-@require_http_methods(["POST"])
-def dashboard_delete(request, dashboard_id):
-    """删除仪表盘"""
-    try:
-        # 只允许删除用户自己创建的仪表盘
-        dashboard = get_object_or_404(Dashboard, id=dashboard_id, created_by=request.user)
-        
-        dashboard.delete()
-        
-        return JsonResponse({
-            'success': True,
-            'message': '仪表盘删除成功'
-        })
-        
-    except Dashboard.DoesNotExist:
-        return JsonResponse({'success': False, 'error': '仪表盘不存在或无权限删除'})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})

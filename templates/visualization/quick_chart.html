@@ -111,8 +111,8 @@
                             <h5 class="mb-3">
                                 <i class="fas fa-cog me-2"></i>第三步：完成设置
                             </h5>
-                            <div class="row">
-                                <div class="col-md-6">
+                            <div class="row justify-content-center">
+                                <div class="col-md-8">
                                     <div class="mb-3">
                                         <label for="chartTitle" class="form-label">图表标题</label>
                                         <input type="text" class="form-control" id="chartTitle" name="title" placeholder="请输入图表标题">
@@ -127,23 +127,6 @@
                                             <label class="form-check-label" for="isPublic">
                                                 公开图表（其他用户可以查看）
                                             </label>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="card">
-                                        <div class="card-header">
-                                            <h6 class="mb-0">图表预览</h6>
-                                        </div>
-                                        <div class="card-body">
-                                            <div id="chartPreview" style="height: 250px;">
-                                                <div class="d-flex align-items-center justify-content-center h-100">
-                                                    <div class="text-center text-muted">
-                                                        <i class="fas fa-chart-line fa-2x mb-2"></i>
-                                                        <p>图表预览</p>
-                                                    </div>
-                                                </div>
-                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -222,7 +205,7 @@
 let currentStep = 1;
 let selectedDataType = '';
 let selectedChartType = '';
-let previewChart = null;
+
 
 // 图表类型配置
 const chartTypeConfigs = {
@@ -280,7 +263,7 @@ function nextStep() {
             alert('请选择图表类型');
             return;
         }
-        generatePreview();
+
     }
     
     currentStep++;
@@ -354,46 +337,81 @@ function showChartTypeOptions() {
 }
 
 function generatePreview() {
-    const container = document.getElementById('chartPreview');
-    
     // 生成默认标题
     const dataTypeNames = { sales: '销量', price: '价格', rating: '评分' };
     const chartTypeNames = { line: '折线图', bar: '柱状图', pie: '饼图', scatter: '散点图' };
     const defaultTitle = `${dataTypeNames[selectedDataType]}${chartTypeNames[selectedChartType]}`;
     document.getElementById('chartTitle').value = defaultTitle;
-    
-    // 初始化图表
-    if (previewChart) {
-        previewChart.dispose();
-    }
-    previewChart = echarts.init(container);
-    
-    // 生成示例数据
-    const sampleData = generateSampleData();
-    const option = generateChartOption(sampleData);
-    previewChart.setOption(option);
 }
 
 function generateSampleData() {
-    // 根据数据类型生成示例数据
-    const labels = ['1月', '2月', '3月', '4月', '5月', '6月'];
-    let data;
-    
-    switch (selectedDataType) {
-        case 'sales':
-            data = [120, 200, 150, 80, 70, 110];
-            break;
-        case 'price':
-            data = [15.5, 16.2, 15.8, 16.5, 17.1, 16.8];
-            break;
-        case 'rating':
-            data = [4.2, 4.5, 4.3, 4.6, 4.4, 4.7];
-            break;
-        default:
-            data = [10, 20, 30, 40, 50, 60];
+    // 根据数据类型和图表类型生成示例数据
+    if (selectedChartType === 'scatter') {
+        // 散点图需要特殊的数据格式
+        let scatterData;
+        switch (selectedDataType) {
+            case 'price':
+                scatterData = [
+                    {x: 2.5, y: 15.8}, {x: 4.2, y: 12.3}, {x: 6.1, y: 9.7},
+                    {x: 8.3, y: 7.2}, {x: 10.5, y: 5.8}, {x: 12.8, y: 4.5}
+                ];
+                return { 
+                    scatterData, 
+                    xAxisLabel: '里程数(万公里)', 
+                    yAxisLabel: '价格(万元)' 
+                };
+            case 'sales':
+                scatterData = [
+                    {x: 10, y: 120}, {x: 15, y: 200}, {x: 20, y: 150},
+                    {x: 25, y: 80}, {x: 30, y: 70}, {x: 35, y: 110}
+                ];
+                return { 
+                    scatterData, 
+                    xAxisLabel: '价格(万元)', 
+                    yAxisLabel: '销量(台)' 
+                };
+            case 'rating':
+                scatterData = [
+                    {x: 10, y: 4.2}, {x: 15, y: 4.5}, {x: 20, y: 4.3},
+                    {x: 25, y: 4.6}, {x: 30, y: 4.4}, {x: 35, y: 4.7}
+                ];
+                return { 
+                    scatterData, 
+                    xAxisLabel: '价格(万元)', 
+                    yAxisLabel: '评分' 
+                };
+            default:
+                scatterData = [
+                    {x: 10, y: 20}, {x: 20, y: 30}, {x: 30, y: 40},
+                    {x: 40, y: 50}, {x: 50, y: 60}, {x: 60, y: 70}
+                ];
+                return { 
+                    scatterData, 
+                    xAxisLabel: 'X轴', 
+                    yAxisLabel: 'Y轴' 
+                };
+        }
+    } else {
+        // 其他图表类型的数据格式
+        const labels = ['1月', '2月', '3月', '4月', '5月', '6月'];
+        let data;
+        
+        switch (selectedDataType) {
+            case 'sales':
+                data = [120, 200, 150, 80, 70, 110];
+                break;
+            case 'price':
+                data = [15.5, 16.2, 15.8, 16.5, 17.1, 16.8];
+                break;
+            case 'rating':
+                data = [4.2, 4.5, 4.3, 4.6, 4.4, 4.7];
+                break;
+            default:
+                data = [10, 20, 30, 40, 50, 60];
+        }
+        
+        return { labels, data };
     }
-    
-    return { labels, data };
 }
 
 function generateChartOption(sampleData) {
@@ -403,7 +421,7 @@ function generateChartOption(sampleData) {
             left: 'center'
         },
         tooltip: {
-            trigger: selectedChartType === 'pie' ? 'item' : 'axis'
+            trigger: selectedChartType === 'pie' ? 'item' : (selectedChartType === 'scatter' ? 'item' : 'axis')
         },
         grid: {
             left: '3%',
@@ -421,6 +439,55 @@ function generateChartOption(sampleData) {
                 name: label,
                 value: sampleData.data[index]
             }))
+        }];
+    } else if (selectedChartType === 'scatter') {
+        // 散点图配置
+        option.tooltip = {
+            trigger: 'item',
+            formatter: function(params) {
+                return '数据点<br/>' +
+                       sampleData.xAxisLabel + ': ' + params.value[0] + '<br/>' +
+                       sampleData.yAxisLabel + ': ' + params.value[1];
+            }
+        };
+        option.grid = {
+            left: '10%',
+            right: '10%',
+            bottom: '15%',
+            top: '10%',
+            containLabel: true
+        };
+        option.xAxis = {
+            type: 'value',
+            name: sampleData.xAxisLabel || 'X轴',
+            nameLocation: 'middle',
+            nameGap: 30,
+            splitLine: {
+                show: true,
+                lineStyle: {
+                    type: 'dashed'
+                }
+            }
+        };
+        option.yAxis = {
+            type: 'value',
+            name: sampleData.yAxisLabel || 'Y轴',
+            nameLocation: 'middle',
+            nameGap: 50,
+            splitLine: {
+                show: true,
+                lineStyle: {
+                    type: 'dashed'
+                }
+            }
+        };
+        option.series = [{
+            type: 'scatter',
+            data: sampleData.scatterData.map(point => [point.x, point.y]),
+            symbolSize: 8,
+            emphasis: {
+                symbolSize: 12
+            }
         }];
     } else {
         option.xAxis = {

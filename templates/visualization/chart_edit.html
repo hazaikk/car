@@ -269,10 +269,87 @@ function generateChartOption(data) {
                 }
             }
         }];
+    } else if (chartType === 'radar') {
+        const maxValue = data.datasets && data.datasets[0] && data.datasets[0].data ? 
+            Math.max(...data.datasets[0].data) * 1.2 : 100;
+        option.radar = {
+            indicator: data.labels ? data.labels.map(label => ({ 
+                name: label, 
+                max: maxValue > 0 ? maxValue : 100
+            })) : [],
+            center: ['50%', '50%'],
+            radius: '60%'
+        };
+        option.series = [{
+            name: data.datasets && data.datasets[0] ? data.datasets[0].label : '数据',
+            type: 'radar',
+            data: [{
+                value: data.datasets && data.datasets[0] ? data.datasets[0].data : [],
+                name: data.datasets && data.datasets[0] ? data.datasets[0].label : '数据'
+            }]
+        }];
+        // 雷达图不需要grid配置
+        delete option.grid;
+    } else if (chartType === 'scatter') {
+        // 散点图配置
+        option.tooltip = {
+            trigger: 'item',
+            formatter: function(params) {
+                return params.seriesName + '<br/>' +
+                       '里程: ' + params.value[0] + '万公里<br/>' +
+                       '价格: ' + params.value[1] + '万元';
+            }
+        };
+        option.grid = {
+            left: '10%',
+            right: '10%',
+            bottom: '15%',
+            top: '10%',
+            containLabel: true
+        };
+        option.xAxis = {
+            type: 'value',
+            name: data.xAxisLabel || 'X轴',
+            nameLocation: 'middle',
+            nameGap: 30,
+            splitLine: {
+                show: true,
+                lineStyle: {
+                    type: 'dashed'
+                }
+            }
+        };
+        option.yAxis = {
+            type: 'value',
+            name: data.yAxisLabel || 'Y轴',
+            nameLocation: 'middle',
+            nameGap: 50,
+            splitLine: {
+                show: true,
+                lineStyle: {
+                    type: 'dashed'
+                }
+            }
+        };
+        
+        option.series = data.datasets ? data.datasets.map(dataset => ({
+            name: dataset.label || '数据',
+            type: 'scatter',
+            data: dataset.data ? dataset.data.map(point => [point.x, point.y]) : [],
+            symbolSize: dataset.pointRadius || 6,
+            emphasis: {
+                symbolSize: dataset.pointHoverRadius || 8
+            }
+        })) : [];
     } else {
         option.xAxis = {
             type: 'category',
-            data: data.labels || []
+            data: data.labels || [],
+            axisLabel: {
+                rotate: (data.labels && data.labels.length > 6) ? 45 : 0,
+                interval: 0,
+                fontSize: 12
+            }
         };
         option.yAxis = {
             type: 'value'

@@ -1,0 +1,381 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}关于我们 - 汽车之家数据可视化与智能分析平台{% endblock %}
+
+{% block extra_css %}
+<style>
+    .team-member {
+        transition: transform 0.3s ease;
+    }
+    .team-member:hover {
+        transform: translateY(-10px);
+    }
+    .member-avatar {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 4px solid #fff;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    .position-badge {
+        font-size: 0.9rem;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+    }
+    .hero-section {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 4rem 0;
+    }
+    .stats-card {
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease;
+    }
+    .stats-card:hover {
+        transform: translateY(-5px);
+    }
+    .timeline {
+        position: relative;
+        padding-left: 2rem;
+    }
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 1rem;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #007bff;
+    }
+    .timeline-item {
+        position: relative;
+        margin-bottom: 2rem;
+    }
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -1.5rem;
+        top: 0.5rem;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #007bff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- 英雄区域 -->
+<section class="hero-section">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <h1 class="display-4 fw-bold mb-4">关于我们</h1>
+                <p class="lead mb-4">我们是来自佛山大学数学学院的一支充满活力的团队，专注于汽车数据分析与可视化技术的研究与应用。</p>
+                <div class="d-flex flex-wrap gap-3">
+                    <span class="badge bg-light text-dark px-3 py-2">数据科学</span>
+                    <span class="badge bg-light text-dark px-3 py-2">大数据技术</span>
+                    <span class="badge bg-light text-dark px-3 py-2">软件工程</span>
+                    <span class="badge bg-light text-dark px-3 py-2">智能分析</span>
+                </div>
+            </div>
+            <div class="col-lg-4 text-center">
+                <i class="fas fa-users fa-8x opacity-75"></i>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="container py-5">
+    <!-- 项目统计 -->
+    <section class="mb-5">
+        <div class="row g-4">
+            <div class="col-md-3">
+                <div class="card stats-card text-center h-100">
+                    <div class="card-body">
+                        <i class="fas fa-database fa-3x text-primary mb-3"></i>
+                        <h3 class="fw-bold">10万+</h3>
+                        <p class="text-muted mb-0">数据记录</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stats-card text-center h-100">
+                    <div class="card-body">
+                        <i class="fas fa-chart-line fa-3x text-success mb-3"></i>
+                        <h3 class="fw-bold">50+</h3>
+                        <p class="text-muted mb-0">可视化图表</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stats-card text-center h-100">
+                    <div class="card-body">
+                        <i class="fas fa-code fa-3x text-warning mb-3"></i>
+                        <h3 class="fw-bold">20+</h3>
+                        <p class="text-muted mb-0">API接口</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stats-card text-center h-100">
+                    <div class="card-body">
+                        <i class="fas fa-clock fa-3x text-info mb-3"></i>
+                        <h3 class="fw-bold">3个月</h3>
+                        <p class="text-muted mb-0">开发周期</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- 团队介绍 -->
+    <section class="mb-5">
+        <div class="text-center mb-5">
+            <h2 class="display-5 fw-bold mb-3">我们的团队</h2>
+            <p class="lead text-muted">来自佛山大学数学学院22级数据科学与大数据技术专业的优秀团队</p>
+        </div>
+        
+        <div class="row g-4">
+            <!-- 刘少康 -->
+            <div class="col-lg-6">
+                <div class="card team-member h-100 border-0 shadow">
+                    <div class="card-body text-center p-4">
+                        <div class="mb-4">
+                            <svg class="member-avatar" viewBox="0 0 150 150">
+                                <circle cx="75" cy="75" r="75" fill="#007bff"/>
+                                <text x="75" y="85" text-anchor="middle" fill="white" font-size="48" font-weight="bold">刘</text>
+                            </svg>
+                        </div>
+                        <h4 class="fw-bold mb-2">刘少康</h4>
+                        <span class="badge position-badge bg-primary text-white mb-3">项目经理 & 后端开发工程师</span>
+                        <p class="text-muted mb-3">负责项目整体规划、架构设计和后端开发。具有丰富的Python开发经验，擅长Django框架和数据库设计。在项目中主导了系统架构设计、API接口开发和数据模型构建。</p>
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <small class="text-muted">专业技能</small>
+                                <div class="fw-bold">Python/Django</div>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted">负责模块</small>
+                                <div class="fw-bold">后端架构</div>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted">项目贡献</small>
+                                <div class="fw-bold">35%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 丘宇航 -->
+            <div class="col-lg-6">
+                <div class="card team-member h-100 border-0 shadow">
+                    <div class="card-body text-center p-4">
+                        <div class="mb-4">
+                            <svg class="member-avatar" viewBox="0 0 150 150">
+                                <circle cx="75" cy="75" r="75" fill="#28a745"/>
+                                <text x="75" y="85" text-anchor="middle" fill="white" font-size="48" font-weight="bold">丘</text>
+                            </svg>
+                        </div>
+                        <h4 class="fw-bold mb-2">丘宇航</h4>
+                        <span class="badge position-badge bg-success text-white mb-3">前端开发工程师 & UI/UX设计师</span>
+                        <p class="text-muted mb-3">专注于用户界面设计和前端开发，具有敏锐的设计感和优秀的前端技术能力。负责整个平台的界面设计、用户体验优化和前端交互功能实现，确保平台的美观性和易用性。</p>
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <small class="text-muted">专业技能</small>
+                                <div class="fw-bold">HTML/CSS/JS</div>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted">负责模块</small>
+                                <div class="fw-bold">前端界面</div>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted">项目贡献</small>
+                                <div class="fw-bold">30%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 叶彦斌 -->
+            <div class="col-lg-6">
+                <div class="card team-member h-100 border-0 shadow">
+                    <div class="card-body text-center p-4">
+                        <div class="mb-4">
+                            <svg class="member-avatar" viewBox="0 0 150 150">
+                                <circle cx="75" cy="75" r="75" fill="#ffc107"/>
+                                <text x="75" y="85" text-anchor="middle" fill="white" font-size="48" font-weight="bold">叶</text>
+                            </svg>
+                        </div>
+                        <h4 class="fw-bold mb-2">叶彦斌</h4>
+                        <span class="badge position-badge bg-warning text-dark mb-3">数据分析师 & 算法工程师</span>
+                        <p class="text-muted mb-3">专业的数据分析师，具有深厚的统计学和机器学习背景。负责数据清洗、特征工程、智能分析算法设计和实现。在项目中构建了价格预测模型和市场趋势分析算法。</p>
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <small class="text-muted">专业技能</small>
+                                <div class="fw-bold">数据分析/ML</div>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted">负责模块</small>
+                                <div class="fw-bold">智能分析</div>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted">项目贡献</small>
+                                <div class="fw-bold">20%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 庄伦杰 -->
+            <div class="col-lg-6">
+                <div class="card team-member h-100 border-0 shadow">
+                    <div class="card-body text-center p-4">
+                        <div class="mb-4">
+                            <svg class="member-avatar" viewBox="0 0 150 150">
+                                <circle cx="75" cy="75" r="75" fill="#dc3545"/>
+                                <text x="75" y="85" text-anchor="middle" fill="white" font-size="48" font-weight="bold">庄</text>
+                            </svg>
+                        </div>
+                        <h4 class="fw-bold mb-2">庄伦杰</h4>
+                        <span class="badge position-badge bg-danger text-white mb-3">测试工程师 & 运维工程师</span>
+                        <p class="text-muted mb-3">负责系统测试、质量保证和运维部署工作。具有丰富的软件测试经验和系统运维能力。在项目中负责功能测试、性能测试、系统部署和维护，确保平台的稳定性和可靠性。</p>
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <small class="text-muted">专业技能</small>
+                                <div class="fw-bold">测试/运维</div>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted">负责模块</small>
+                                <div class="fw-bold">质量保证</div>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted">项目贡献</small>
+                                <div class="fw-bold">15%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- 项目背景 -->
+    <section class="mb-5">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h2 class="display-6 fw-bold mb-4">项目背景</h2>
+                <p class="lead mb-4">本项目是佛山大学数学学院软件工程课程的课程设计项目，旨在通过实际项目开发提升学生的软件工程实践能力。</p>
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <h5 class="fw-bold">需求分析阶段</h5>
+                        <p class="text-muted">深入调研二手车市场，分析用户需求，确定系统功能范围。</p>
+                    </div>
+                    <div class="timeline-item">
+                        <h5 class="fw-bold">系统设计阶段</h5>
+                        <p class="text-muted">设计系统架构，制定技术方案，规划数据库结构。</p>
+                    </div>
+                    <div class="timeline-item">
+                        <h5 class="fw-bold">开发实现阶段</h5>
+                        <p class="text-muted">采用敏捷开发方法，分模块并行开发，定期集成测试。</p>
+                    </div>
+                    <div class="timeline-item">
+                        <h5 class="fw-bold">测试部署阶段</h5>
+                        <p class="text-muted">全面测试系统功能，优化性能，部署上线运行。</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card border-0 shadow">
+                    <div class="card-body p-4">
+                        <h4 class="fw-bold mb-3">技术栈</h4>
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fab fa-python fa-lg text-primary me-2"></i>
+                                    <span>Python</span>
+                                </div>
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fas fa-server fa-lg text-success me-2"></i>
+                                    <span>Django</span>
+                                </div>
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fas fa-database fa-lg text-warning me-2"></i>
+                                    <span>SQLite</span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fab fa-html5 fa-lg text-danger me-2"></i>
+                                    <span>HTML5</span>
+                                </div>
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fab fa-css3-alt fa-lg text-info me-2"></i>
+                                    <span>CSS3</span>
+                                </div>
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fab fa-js-square fa-lg text-warning me-2"></i>
+                                    <span>JavaScript</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <h5 class="fw-bold mt-4 mb-3">核心功能</h5>
+                        <ul class="list-unstyled">
+                            <li class="mb-2"><i class="fas fa-check text-success me-2"></i>数据可视化分析</li>
+                            <li class="mb-2"><i class="fas fa-check text-success me-2"></i>智能预测算法</li>
+                            <li class="mb-2"><i class="fas fa-check text-success me-2"></i>竞品对比分析</li>
+                            <li class="mb-2"><i class="fas fa-check text-success me-2"></i>RESTful API</li>
+                            <li class="mb-2"><i class="fas fa-check text-success me-2"></i>用户权限管理</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- 联系我们 -->
+    <section class="text-center">
+        <div class="card border-0 shadow-lg">
+            <div class="card-body p-5">
+                <h2 class="display-6 fw-bold mb-4">联系我们</h2>
+                <p class="lead mb-4">如果您对我们的项目感兴趣，或者有任何建议和合作意向，欢迎与我们联系！</p>
+                <div class="row justify-content-center">
+                    <div class="col-md-8">
+                        <div class="row g-4">
+                            <div class="col-md-4">
+                                <div class="d-flex flex-column align-items-center">
+                                    <i class="fas fa-envelope fa-2x text-primary mb-2"></i>
+                                    <h6 class="fw-bold">邮箱</h6>
+                                    <small class="text-muted">3505318655@qq.com</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="d-flex flex-column align-items-center">
+                                    <i class="fas fa-phone fa-2x text-success mb-2"></i>
+                                    <h6 class="fw-bold">电话</h6>
+                                    <small class="text-muted">19868704489</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="d-flex flex-column align-items-center">
+                                    <i class="fas fa-university fa-2x text-info mb-2"></i>
+                                    <h6 class="fw-bold">学校</h6>
+                                    <small class="text-muted">佛山大学数学学院</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}

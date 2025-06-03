@@ -1,5 +1,5 @@
 from django import forms
-from .models import Chart, Dashboard
+from .models import Chart
 
 class ChartForm(forms.ModelForm):
     """图表表单"""
@@ -19,20 +19,4 @@ class ChartForm(forms.ModelForm):
             'chart_type': '图表类型',
             'data_type': '数据类型',
             'is_public': '公开图表',
-        }
-
-class DashboardForm(forms.ModelForm):
-    """仪表板表单"""
-    class Meta:
-        model = Dashboard
-        fields = ['title', 'description', 'is_public']
-        widgets = {
-            'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '请输入仪表板标题'}),
-            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': '请输入仪表板描述'}),
-            'is_public': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-        }
-        labels = {
-            'title': '仪表板标题',
-            'description': '仪表板描述',
-            'is_public': '公开仪表板',
         }

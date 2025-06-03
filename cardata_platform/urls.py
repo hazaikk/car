@@ -18,6 +18,17 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.shortcuts import render
+
+# 添加新页面的视图函数
+def help_view(request):
+    return render(request, 'help.html')
+
+def about_view(request):
+    return render(request, 'about.html')
+
+def contact_view(request):
+    return render(request, 'contact.html')
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -30,6 +41,10 @@ urlpatterns = [
     path('visualization/', include('visualization.urls')),  # 数据可视化
     path('car_analysis/', include('car_analysis.urls')),  # 汽车分析
     path('car_api/', include('car_api.urls')),  # 汽车API
+    # 新增页面路由
+    path('help/', help_view, name='help'),  # 使用帮助
+    path('about/', about_view, name='about'),  # 关于我们
+    path('contact/', contact_view, name='contact'),  # 联系我们
 ]
 
 # 在开发环境中提供媒体文件服务

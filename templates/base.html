@@ -109,32 +109,36 @@
     </div>
 
     <!-- 页脚 -->
-    <footer class="bg-light text-center text-lg-start mt-5">
-        <div class="container p-4">
+    <footer class="bg-dark text-light py-4 mt-5">
+        <div class="container">
             <div class="row">
-                <div class="col-lg-6 col-md-12 mb-4 mb-md-0">
-                    <h5>汽车之家数据可视化与智能分析平台</h5>
-                    <p>提供全面的汽车数据分析、可视化和智能推荐服务</p>
-                </div>
-                <div class="col-lg-3 col-md-6 mb-4 mb-md-0">
+                <div class="col-md-4">
                     <h5>快速链接</h5>
-                    <ul class="list-unstyled mb-0">
-                        <li><a href="#" class="text-dark">关于我们</a></li>
-                        <li><a href="#" class="text-dark">联系我们</a></li>
-                        <li><a href="#" class="text-dark">使用帮助</a></li>
+                    <ul class="list-unstyled">
+                        <li><a href="{% url 'about' %}" class="text-light">关于我们</a></li>
+                        <li><a href="{% url 'contact' %}" class="text-light">联系我们</a></li>
+                        <li><a href="{% url 'help' %}" class="text-light">使用帮助</a></li>
                     </ul>
                 </div>
-                <div class="col-lg-3 col-md-6 mb-4 mb-md-0">
+                <div class="col-md-4">
                     <h5>联系方式</h5>
-                    <ul class="list-unstyled">
-                        <li><i class="fas fa-envelope me-2"></i>contact@example.com</li>
-                        <li><i class="fas fa-phone me-2"></i>+86 123 4567 8901</li>
-                    </ul>
+                    <p><i class="fas fa-envelope"></i> 3505318655@qq.com</p>
+                    <p><i class="fas fa-phone"></i> 19868704489</p>
+                </div>
+                <div class="col-md-4">
+                    <h5>开源项目</h5>
+                    <div class="github-link">
+                        <a href="https://github.com/hazaikk/car" target="_blank" class="text-light">
+                            <i class="fab fa-github me-2"></i>GitHub 项目地址
+                        </a>
+                        <p class="text-muted mt-2 mb-0">欢迎 Star 和 Fork</p>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="text-center p-3" style="background-color: rgba(0, 0, 0, 0.05);">
-            © 2023 汽车数据平台 | 版权所有
+            <hr class="my-4">
+            <div class="text-center">
+                <p>&copy; 2025 汽车之家数据可视化与智能分析平台 | 刘少康、丘宇航、叶彦斌、庄伦杰</p>
+            </div>
         </div>
     </footer>
 

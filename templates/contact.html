@@ -1,0 +1,385 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}联系我们 - 汽车之家数据可视化与智能分析平台{% endblock %}
+
+{% block extra_css %}
+<style>
+    .contact-hero {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 4rem 0;
+    }
+    .contact-card {
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease;
+    }
+    .contact-card:hover {
+        transform: translateY(-5px);
+    }
+    .contact-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+    }
+    .wechat-card {
+        background: linear-gradient(135deg, #07c160 0%, #00d4aa 100%);
+        color: white;
+        border-radius: 20px;
+        padding: 2rem;
+    }
+    .qr-code {
+        max-width: 300px;
+        border-radius: 15px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    }
+    .feature-item {
+        padding: 1.5rem;
+        border-radius: 10px;
+        background: #f8f9fa;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+    }
+    .feature-item:hover {
+        background: #e9ecef;
+        transform: translateX(10px);
+    }
+    .social-link {
+        display: inline-block;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        text-align: center;
+        line-height: 50px;
+        color: white;
+        text-decoration: none;
+        margin: 0 10px;
+        transition: transform 0.3s ease;
+    }
+    .social-link:hover {
+        transform: scale(1.1);
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- 英雄区域 -->
+<section class="contact-hero">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <h1 class="display-4 fw-bold mb-4">联系我们</h1>
+                <p class="lead mb-4">我们随时准备为您提供专业的技术支持和服务，期待与您的合作交流！</p>
+                <div class="d-flex flex-wrap gap-3">
+                    <span class="badge bg-light text-dark px-3 py-2">7×24小时在线</span>
+                    <span class="badge bg-light text-dark px-3 py-2">专业技术支持</span>
+                    <span class="badge bg-light text-dark px-3 py-2">快速响应</span>
+                </div>
+            </div>
+            <div class="col-lg-4 text-center">
+                <i class="fas fa-headset fa-8x opacity-75"></i>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="container py-5">
+    <!-- 联系方式 -->
+    <section class="mb-5">
+        <div class="text-center mb-5">
+            <h2 class="display-5 fw-bold mb-3">多种联系方式</h2>
+            <p class="lead text-muted">选择最适合您的方式与我们取得联系</p>
+        </div>
+        
+        <div class="row g-4">
+            <!-- 邮箱联系 -->
+            <div class="col-lg-4">
+                <div class="card contact-card h-100 text-center">
+                    <div class="card-body p-4">
+                        <div class="contact-icon bg-primary text-white">
+                            <i class="fas fa-envelope fa-2x"></i>
+                        </div>
+                        <h4 class="fw-bold mb-3">邮箱联系</h4>
+                        <p class="text-muted mb-3">发送邮件给我们，我们会在24小时内回复您的问题</p>
+                        <h5 class="text-primary mb-3">3505318655@qq.com</h5>
+                        <a href="mailto:3505318655@qq.com" class="btn btn-primary">
+                            <i class="fas fa-paper-plane me-2"></i>发送邮件
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 电话联系 -->
+            <div class="col-lg-4">
+                <div class="card contact-card h-100 text-center">
+                    <div class="card-body p-4">
+                        <div class="contact-icon bg-success text-white">
+                            <i class="fas fa-phone fa-2x"></i>
+                        </div>
+                        <h4 class="fw-bold mb-3">电话联系</h4>
+                        <p class="text-muted mb-3">直接拨打我们的服务热线，获得即时技术支持</p>
+                        <h5 class="text-success mb-3">19868704489</h5>
+                        <a href="tel:19868704489" class="btn btn-success">
+                            <i class="fas fa-phone me-2"></i>立即拨打
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 在线客服 -->
+            <div class="col-lg-4">
+                <div class="card contact-card h-100 text-center">
+                    <div class="card-body p-4">
+                        <div class="contact-icon bg-info text-white">
+                            <i class="fas fa-comments fa-2x"></i>
+                        </div>
+                        <h4 class="fw-bold mb-3">在线客服</h4>
+                        <p class="text-muted mb-3">通过在线聊天工具与我们的技术专家实时交流</p>
+                        <h5 class="text-info mb-3">工作日 9:00-18:00</h5>
+                        <button class="btn btn-info" onclick="alert('在线客服功能即将上线！')">
+                            <i class="fas fa-comment-dots me-2"></i>开始聊天
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- 微信联系 -->
+    <section class="mb-5">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <div class="wechat-card">
+                    <h2 class="fw-bold mb-4">
+                        <i class="fab fa-weixin fa-2x me-3"></i>
+                        微信联系
+                    </h2>
+                    <p class="lead mb-4">扫描右侧二维码添加我们的微信，获得更便捷的沟通体验</p>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="feature-item">
+                                <i class="fas fa-clock text-success me-2"></i>
+                                <strong>快速响应</strong>
+                                <p class="mb-0 mt-2 text-muted">工作时间内5分钟内回复</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="feature-item">
+                                <i class="fas fa-user-tie text-primary me-2"></i>
+                                <strong>专业服务</strong>
+                                <p class="mb-0 mt-2 text-muted">技术专家一对一服务</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="feature-item">
+                                <i class="fas fa-file-alt text-warning me-2"></i>
+                                <strong>文档支持</strong>
+                                <p class="mb-0 mt-2 text-muted">提供详细的技术文档</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="feature-item">
+                                <i class="fas fa-shield-alt text-info me-2"></i>
+                                <strong>隐私保护</strong>
+                                <p class="mb-0 mt-2 text-muted">严格保护用户隐私</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-6 text-center">
+                <div class="card border-0 shadow-lg">
+                    <div class="card-body p-4">
+                        <h4 class="fw-bold mb-4">扫码添加微信</h4>
+                        <img src="{% static '微信名片.jpg' %}" alt="微信二维码" class="img-fluid qr-code mb-4">
+                        <p class="text-muted mb-3">扫描二维码添加微信好友</p>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <small>添加时请备注"汽车平台咨询"以便快速通过</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- 服务时间 -->
+    <section class="mb-5">
+        <div class="card border-0 shadow">
+            <div class="card-body p-4">
+                <div class="row align-items-center">
+                    <div class="col-lg-6">
+                        <h3 class="fw-bold mb-4">
+                            <i class="fas fa-clock text-primary me-2"></i>
+                            服务时间
+                        </h3>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5 class="fw-bold text-success">工作日</h5>
+                                <p class="text-muted mb-3">周一至周五<br>上午 9:00 - 下午 18:00</p>
+                                
+                                <h5 class="fw-bold text-warning">周末</h5>
+                                <p class="text-muted mb-3">周六至周日<br>上午 10:00 - 下午 16:00</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h5 class="fw-bold text-info">紧急支持</h5>
+                                <p class="text-muted mb-3">7×24小时<br>微信/邮箱响应</p>
+                                
+                                <h5 class="fw-bold text-danger">节假日</h5>
+                                <p class="text-muted mb-3">法定节假日<br>微信/邮箱服务</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-6">
+                        <h3 class="fw-bold mb-4">
+                            <i class="fas fa-headset text-success me-2"></i>
+                            服务承诺
+                        </h3>
+                        <ul class="list-unstyled">
+                            <li class="mb-3">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>快速响应：</strong>工作时间内30分钟内回复
+                            </li>
+                            <li class="mb-3">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>专业服务：</strong>技术问题由专业工程师解答
+                            </li>
+                            <li class="mb-3">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>持续跟进：</strong>问题解决全程跟踪服务
+                            </li>
+                            <li class="mb-3">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>免费咨询：</strong>所有技术咨询完全免费
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- 常见问题快速入口 -->
+    <section class="mb-5">
+        <div class="text-center mb-4">
+            <h3 class="fw-bold">常见问题快速解决</h3>
+            <p class="text-muted">在联系我们之前，您可以先查看这些常见问题</p>
+        </div>
+        
+        <div class="row g-3">
+            <div class="col-md-3">
+                <a href="/help/#faq" class="btn btn-outline-primary w-100 p-3">
+                    <i class="fas fa-question-circle fa-2x mb-2 d-block"></i>
+                    <strong>常见问题</strong>
+                </a>
+            </div>
+            <div class="col-md-3">
+                <a href="/help/#api-usage" class="btn btn-outline-success w-100 p-3">
+                    <i class="fas fa-code fa-2x mb-2 d-block"></i>
+                    <strong>API 使用</strong>
+                </a>
+            </div>
+            <div class="col-md-3">
+                <a href="/help/#getting-started" class="btn btn-outline-warning w-100 p-3">
+                    <i class="fas fa-play fa-2x mb-2 d-block"></i>
+                    <strong>快速开始</strong>
+                </a>
+            </div>
+            <div class="col-md-3">
+                <a href="/car_api/docs/" class="btn btn-outline-info w-100 p-3">
+                    <i class="fas fa-book fa-2x mb-2 d-block"></i>
+                    <strong>API 文档</strong>
+                </a>
+            </div>
+        </div>
+    </section>
+    
+    <!-- 社交媒体 -->
+    <section class="text-center">
+        <div class="card border-0 shadow-lg">
+            <div class="card-body p-5">
+                <h3 class="fw-bold mb-4">关注我们</h3>
+                <p class="lead mb-4">通过社交媒体了解我们的最新动态和技术分享</p>
+                
+                <div class="d-flex justify-content-center mb-4">
+                    <a href="#" class="social-link" style="background: #1DA1F2;" title="微博">
+                        <i class="fab fa-weibo"></i>
+                    </a>
+                    <a href="#" class="social-link" style="background: #25D366;" title="微信">
+                        <i class="fab fa-weixin"></i>
+                    </a>
+                    <a href="#" class="social-link" style="background: #FF0000;" title="小红书">
+                        <i class="fas fa-book"></i>
+                    </a>
+                    <a href="#" class="social-link" style="background: #333;" title="GitHub">
+                        <i class="fab fa-github"></i>
+                    </a>
+                </div>
+                
+                <div class="row justify-content-center">
+                    <div class="col-md-8">
+                        <div class="alert alert-light border">
+                            <h6 class="fw-bold mb-2">
+                                <i class="fas fa-bell text-warning me-2"></i>
+                                获取最新资讯
+                            </h6>
+                            <p class="mb-0 text-muted">
+                                关注我们的社交媒体账号，第一时间获取平台更新、技术分享和行业动态
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<script>
+// 复制联系方式到剪贴板
+function copyToClipboard(text, element) {
+    navigator.clipboard.writeText(text).then(function() {
+        // 显示复制成功提示
+        const originalText = element.innerHTML;
+        element.innerHTML = '<i class="fas fa-check me-2"></i>已复制';
+        element.classList.add('btn-success');
+        element.classList.remove('btn-primary', 'btn-info');
+        
+        setTimeout(function() {
+            element.innerHTML = originalText;
+            element.classList.remove('btn-success');
+            element.classList.add('btn-primary');
+        }, 2000);
+    });
+}
+
+// 添加复制功能到邮箱和电话按钮
+document.addEventListener('DOMContentLoaded', function() {
+    const emailBtn = document.querySelector('a[href^="mailto:"]');
+    const phoneBtn = document.querySelector('a[href^="tel:"]');
+    
+    if (emailBtn) {
+        emailBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            copyToClipboard('3505318655@qq.com', this);
+        });
+    }
+    
+    if (phoneBtn) {
+        phoneBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            copyToClipboard('19868704489', this);
+        });
+    }
+});
+</script>
+{% endblock %}

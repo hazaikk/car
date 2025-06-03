@@ -1,0 +1,625 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}使用帮助 - 汽车之家数据可视化与智能分析平台{% endblock %}
+
+{% block extra_css %}
+<style>
+    .help-section {
+        margin-bottom: 2rem;
+    }
+    .help-nav {
+        position: sticky;
+        top: 100px;
+    }
+    .step-number {
+        background: #007bff;
+        color: white;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 10px;
+    }
+    .feature-card {
+        transition: transform 0.2s;
+    }
+    .feature-card:hover {
+        transform: translateY(-5px);
+    }
+    .screenshot {
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        margin: 10px 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <!-- 侧边导航 -->
+        <div class="col-lg-3">
+            <div class="help-nav">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-list me-2"></i>快速导航</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="list-group list-group-flush">
+                            <a href="#getting-started" class="list-group-item list-group-item-action">
+                                <i class="fas fa-play me-2"></i>快速开始
+                            </a>
+                            <a href="#data-visualization" class="list-group-item list-group-item-action">
+                                <i class="fas fa-chart-bar me-2"></i>数据可视化
+                            </a>
+                            <a href="#intelligent-analysis" class="list-group-item list-group-item-action">
+                                <i class="fas fa-brain me-2"></i>智能分析
+                            </a>
+                            <a href="#competitive-analysis" class="list-group-item list-group-item-action">
+                                <i class="fas fa-balance-scale me-2"></i>竞品对比
+                            </a>
+                            <a href="#api-usage" class="list-group-item list-group-item-action">
+                                <i class="fas fa-code me-2"></i>API 使用
+                            </a>
+                            <a href="#account-management" class="list-group-item list-group-item-action">
+                                <i class="fas fa-user-cog me-2"></i>账户管理
+                            </a>
+                            <a href="#faq" class="list-group-item list-group-item-action">
+                                <i class="fas fa-question-circle me-2"></i>常见问题
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 主要内容 -->
+        <div class="col-lg-9">
+            <!-- 页面标题 -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1><i class="fas fa-question-circle me-3"></i>使用帮助</h1>
+                <div>
+                    <span class="badge bg-primary">版本 2.0</span>
+                    <span class="badge bg-success">最新更新</span>
+                </div>
+            </div>
+            
+            <!-- 平台概述 -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h3><i class="fas fa-info-circle me-2"></i>平台概述</h3>
+                    <p class="lead">汽车之家数据可视化与智能分析平台是一个专业的二手车数据分析工具，为用户提供全面的市场洞察和智能决策支持。</p>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="card feature-card h-100">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-chart-line fa-3x text-primary mb-3"></i>
+                                    <h5>数据可视化</h5>
+                                    <p>多种图表类型，直观展示市场趋势</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card feature-card h-100">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-robot fa-3x text-success mb-3"></i>
+                                    <h5>智能分析</h5>
+                                    <p>AI驱动的市场分析和预测</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card feature-card h-100">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-api fa-3x text-warning mb-3"></i>
+                                    <h5>API 接口</h5>
+                                    <p>开放的数据接口，支持第三方集成</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 快速开始 -->
+            <section id="getting-started" class="help-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="mb-0"><i class="fas fa-play me-2"></i>快速开始</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5><span class="step-number">1</span>注册账户</h5>
+                                <p>点击右上角"注册"按钮，填写基本信息创建账户。注册后即可使用所有基础功能。</p>
+                                
+                                <h5><span class="step-number">2</span>登录系统</h5>
+                                <p>使用注册的用户名和密码登录系统，登录后可以保存个人设置和图表配置。</p>
+                                
+                                <h5><span class="step-number">3</span>浏览数据</h5>
+                                <p>从导航栏选择"数据图表"开始探索二手车市场数据，支持多种筛选条件。</p>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="alert alert-info">
+                                    <h6><i class="fas fa-lightbulb me-2"></i>新手提示</h6>
+                                    <ul class="mb-0">
+                                        <li>建议先浏览"数据图表"了解平台功能</li>
+                                        <li>可以从"智能分析"获取市场洞察</li>
+                                        <li>使用"竞品对比"进行深度分析</li>
+                                        <li>查看"API文档"了解数据接口</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 数据可视化 -->
+            <section id="data-visualization" class="help-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="mb-0"><i class="fas fa-chart-bar me-2"></i>数据可视化</h3>
+                    </div>
+                    <div class="card-body">
+                        <h5>图表类型</h5>
+                        <div class="row mb-4">
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <i class="fas fa-chart-line fa-2x text-primary mb-2"></i>
+                                    <h6>折线图</h6>
+                                    <small>展示时间趋势变化</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <i class="fas fa-chart-bar fa-2x text-success mb-2"></i>
+                                    <h6>柱状图</h6>
+                                    <small>对比不同类别数据</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <i class="fas fa-chart-pie fa-2x text-warning mb-2"></i>
+                                    <h6>饼图</h6>
+                                    <small>显示占比分布</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <i class="fas fa-chart-area fa-2x text-info mb-2"></i>
+                                    <h6>雷达图</h6>
+                                    <small>多维度数据对比</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <h5>筛选功能</h5>
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>筛选条件</th>
+                                        <th>说明</th>
+                                        <th>使用场景</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>品牌筛选</td>
+                                        <td>选择特定汽车品牌</td>
+                                        <td>分析特定品牌市场表现</td>
+                                    </tr>
+                                    <tr>
+                                        <td>地区筛选</td>
+                                        <td>按地理位置筛选</td>
+                                        <td>了解区域市场差异</td>
+                                    </tr>
+                                    <tr>
+                                        <td>价格范围</td>
+                                        <td>设置价格区间</td>
+                                        <td>分析不同价位车型</td>
+                                    </tr>
+                                    <tr>
+                                        <td>年份筛选</td>
+                                        <td>选择车辆年份</td>
+                                        <td>分析车龄对价格影响</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="alert alert-success">
+                            <h6><i class="fas fa-tips me-2"></i>使用技巧</h6>
+                            <ul class="mb-0">
+                                <li>可以同时使用多个筛选条件进行精确分析</li>
+                                <li>点击图表可以查看详细数据</li>
+                                <li>支持图表导出为图片格式</li>
+                                <li>可以保存常用的图表配置</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 智能分析 -->
+            <section id="intelligent-analysis" class="help-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="mb-0"><i class="fas fa-brain me-2"></i>智能分析</h3>
+                    </div>
+                    <div class="card-body">
+                        <p>智能分析模块使用先进的机器学习算法，为您提供深度的市场洞察和预测分析。</p>
+                        
+                        <h5>分析功能</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card border-primary">
+                                    <div class="card-body">
+                                        <h6><i class="fas fa-trending-up me-2"></i>价格趋势预测</h6>
+                                        <p>基于历史数据预测未来价格走势，帮助您做出明智的买卖决策。</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card border-success">
+                                    <div class="card-body">
+                                        <h6><i class="fas fa-chart-line me-2"></i>市场热度分析</h6>
+                                        <p>分析不同品牌和车型的市场热度，识别投资机会。</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <div class="card border-warning">
+                                    <div class="card-body">
+                                        <h6><i class="fas fa-bullseye me-2"></i>价值评估</h6>
+                                        <p>智能评估车辆的市场价值，提供买卖参考价格。</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card border-info">
+                                    <div class="card-body">
+                                        <h6><i class="fas fa-search me-2"></i>异常检测</h6>
+                                        <p>识别价格异常的车辆，发现潜在的投资机会。</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <h5 class="mt-4">如何使用</h5>
+                        <ol>
+                            <li>进入"智能分析"页面</li>
+                            <li>选择分析类型和参数</li>
+                            <li>点击"开始分析"按钮</li>
+                            <li>查看分析结果和建议</li>
+                        </ol>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 竞品对比 -->
+            <section id="competitive-analysis" class="help-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="mb-0"><i class="fas fa-balance-scale me-2"></i>竞品对比</h3>
+                    </div>
+                    <div class="card-body">
+                        <p>竞品对比功能帮助您深入了解不同品牌、车型之间的市场表现差异。</p>
+                        
+                        <h5>对比维度</h5>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <ul class="list-group">
+                                    <li class="list-group-item"><i class="fas fa-dollar-sign me-2"></i>价格对比</li>
+                                    <li class="list-group-item"><i class="fas fa-chart-bar me-2"></i>销量对比</li>
+                                    <li class="list-group-item"><i class="fas fa-map-marker-alt me-2"></i>地区分布</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-4">
+                                <ul class="list-group">
+                                    <li class="list-group-item"><i class="fas fa-calendar me-2"></i>年份分布</li>
+                                    <li class="list-group-item"><i class="fas fa-gas-pump me-2"></i>燃料类型</li>
+                                    <li class="list-group-item"><i class="fas fa-road me-2"></i>里程分析</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-4">
+                                <ul class="list-group">
+                                    <li class="list-group-item"><i class="fas fa-star me-2"></i>市场占有率</li>
+                                    <li class="list-group-item"><i class="fas fa-trending-up me-2"></i>增长趋势</li>
+                                    <li class="list-group-item"><i class="fas fa-award me-2"></i>品牌价值</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <h5 class="mt-4">操作步骤</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h6>步骤 1：选择对比对象</h6>
+                                        <p>从下拉菜单中选择要对比的品牌或车型（最多支持5个对象同时对比）。</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h6>步骤 2：设置对比条件</h6>
+                                        <p>选择时间范围、地区范围等筛选条件，确保对比的公平性。</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h6>步骤 3：选择对比维度</h6>
+                                        <p>选择要对比的具体指标，如价格、销量、市场占有率等。</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h6>步骤 4：查看对比结果</h6>
+                                        <p>系统将生成详细的对比报告，包括图表和数据分析。</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- API 使用 -->
+            <section id="api-usage" class="help-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="mb-0"><i class="fas fa-code me-2"></i>API 使用</h3>
+                    </div>
+                    <div class="card-body">
+                        <p>平台提供完整的RESTful API，支持第三方应用集成和数据获取。</p>
+                        
+                        <h5>获取API Token</h5>
+                        <ol>
+                            <li>登录您的账户</li>
+                            <li>进入"个人资料"页面</li>
+                            <li>在"API设置"部分点击"生成Token"</li>
+                            <li>复制并保存您的API Token</li>
+                        </ol>
+                        
+                        <h5>API 调用示例</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Python 示例</h6>
+                                <pre class="bg-dark text-light p-3 rounded"><code>import requests
+
+headers = {
+    'Authorization': 'Token YOUR_API_TOKEN',
+    'Content-Type': 'application/json'
+}
+
+response = requests.get(
+    'http://127.0.0.1:8000/api/v1/cars/',
+    headers=headers
+)
+
+data = response.json()
+print(data)</code></pre>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>JavaScript 示例</h6>
+                                <pre class="bg-dark text-light p-3 rounded"><code>fetch('http://127.0.0.1:8000/api/v1/cars/', {
+    method: 'GET',
+    headers: {
+        'Authorization': 'Token YOUR_API_TOKEN',
+        'Content-Type': 'application/json'
+    }
+})
+.then(response => response.json())
+.then(data => console.log(data))
+.catch(error => console.error('Error:', error));</code></pre>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-warning">
+                            <h6><i class="fas fa-exclamation-triangle me-2"></i>注意事项</h6>
+                            <ul class="mb-0">
+                                <li>请妥善保管您的API Token，不要在公开场所泄露</li>
+                                <li>API有访问频率限制，请合理使用</li>
+                                <li>详细的API文档请查看 <a href="/car_api/docs/">API文档页面</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 账户管理 -->
+            <section id="account-management" class="help-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="mb-0"><i class="fas fa-user-cog me-2"></i>账户管理</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5>个人资料</h5>
+                                <ul>
+                                    <li>修改个人信息</li>
+                                    <li>更改密码</li>
+                                    <li>设置头像</li>
+                                    <li>管理API Token</li>
+                                </ul>
+                                
+                                <h5>偏好设置</h5>
+                                <ul>
+                                    <li>默认图表类型</li>
+                                    <li>数据刷新频率</li>
+                                    <li>通知设置</li>
+                                    <li>界面主题</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h5>数据管理</h5>
+                                <ul>
+                                    <li>保存的图表配置</li>
+                                    <li>收藏的分析报告</li>
+                                    <li>历史查询记录</li>
+                                    <li>导出数据记录</li>
+                                </ul>
+                                
+                                <h5>安全设置</h5>
+                                <ul>
+                                    <li>登录历史查看</li>
+                                    <li>设备管理</li>
+                                    <li>两步验证</li>
+                                    <li>账户注销</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 常见问题 -->
+            <section id="faq" class="help-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="mb-0"><i class="fas fa-question-circle me-2"></i>常见问题</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="accordion" id="faqAccordion">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="faq1">
+                                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse1">
+                                        如何注册账户？
+                                    </button>
+                                </h2>
+                                <div id="collapse1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body">
+                                        点击页面右上角的"注册"按钮，填写用户名、邮箱和密码即可完成注册。注册后请验证邮箱以激活账户。
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="faq2">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse2">
+                                        数据多久更新一次？
+                                    </button>
+                                </h2>
+                                <div id="collapse2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body">
+                                        我们的数据每日凌晨2点自动更新，确保您获得最新的市场信息。部分实时数据会更频繁地更新。
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="faq3">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse3">
+                                        如何导出图表？
+                                    </button>
+                                </h2>
+                                <div id="collapse3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body">
+                                        在图表页面，点击图表右上角的"导出"按钮，选择PNG或PDF格式即可下载图表。
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="faq4">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse4">
+                                        API有使用限制吗？
+                                    </button>
+                                </h2>
+                                <div id="collapse4" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body">
+                                        是的，每个API Token每分钟最多100次请求，单次查询最多返回1000条记录。如需更高限额，请联系我们。
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="faq5">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse5">
+                                        忘记密码怎么办？
+                                    </button>
+                                </h2>
+                                <div id="collapse5" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body">
+                                        在登录页面点击"忘记密码"链接，输入注册邮箱，系统会发送重置密码的邮件到您的邮箱。
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 联系我们 -->
+            <div class="card mt-4">
+                <div class="card-body text-center">
+                    <h4><i class="fas fa-headset me-2"></i>需要更多帮助？</h4>
+                    <p>如果您在使用过程中遇到问题，请随时联系我们的技术支持团队。</p>
+                    <div class="row justify-content-center">
+                        <div class="col-md-6">
+                            <p><i class="fas fa-envelope me-2"></i>邮箱：3505318655@qq.com</p>
+                            <p><i class="fas fa-phone me-2"></i>电话：19868704489</p>
+                            <p><i class="fas fa-clock me-2"></i>服务时间：周一至周五 9:00-18:00</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 平滑滚动到锚点
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+            target.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+        }
+    });
+});
+
+// 高亮当前导航项
+window.addEventListener('scroll', function() {
+    const sections = document.querySelectorAll('section[id]');
+    const navLinks = document.querySelectorAll('.help-nav a');
+    
+    let current = '';
+    sections.forEach(section => {
+        const sectionTop = section.offsetTop;
+        const sectionHeight = section.clientHeight;
+        if (scrollY >= (sectionTop - 200)) {
+            current = section.getAttribute('id');
+        }
+    });
+    
+    navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + current) {
+            link.classList.add('active');
+        }
+    });
+});
+</script>
+{% endblock %}

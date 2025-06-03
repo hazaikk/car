@@ -2,7 +2,9 @@ from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from crawler.models import Brand, CarModel, UsedCar
 from django.db.models import Avg, Count, Sum, Min, Max
+from django.http import JsonResponse
 import json
+
 def index(request):
     """首页"""
     # 统计数据
@@ -20,14 +22,6 @@ def index(request):
         'latest_cars': latest_cars,
     }
     return render(request, 'dashboard/index.html', context)
-
-@login_required
-def dashboard(request):
-    """仪表盘"""
-    # 这里可以添加更多的统计数据和图表
-    return render(request, 'dashboard/dashboard.html')
-# dashboard/views.py中添加
-
 
 def car_price_chart(request):
     """车辆价格分布图表"""
