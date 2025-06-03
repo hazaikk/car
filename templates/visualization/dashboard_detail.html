@@ -1,0 +1,298 @@
+{% extends "visualization/base.html" %}
+
+{% block visualization_content %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <!-- 仪表盘标题和描述 -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2>{{ dashboard.title }}</h2>
+                    <p class="text-muted">{{ dashboard.description|default:"暂无描述" }}</p>
+                    <div>
+                        <span class="badge bg-info me-2">
+                            <i class="fas fa-user me-1"></i>{{ dashboard.created_by.username }}
+                        </span>
+                        <span class="badge bg-secondary me-2">
+                            <i class="fas fa-calendar me-1"></i>{{ dashboard.created_at|date:"Y-m-d" }}
+                        </span>
+                        {% if dashboard.is_public %}
+                        <span class="badge bg-success">公开</span>
+                        {% else %}
+                        <span class="badge bg-warning">私有</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="btn-group">
+                    {% if user == dashboard.created_by %}
+                    <button class="btn btn-outline-primary" onclick="editDashboard()">
+                        <i class="fas fa-edit me-2"></i>编辑
+                    </button>
+                    {% endif %}
+                    <button class="btn btn-outline-secondary" onclick="refreshDashboard()">
+                        <i class="fas fa-sync-alt me-2"></i>刷新
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="exportDashboard()">
+                        <i class="fas fa-download me-2"></i>导出
+                    </button>
+                </div>
+            </div>
+
+            <!-- 筛选条件 -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form id="globalFilterForm" class="row g-3">
+                        <!-- 时间范围 -->
+                        <div class="col-md-3">
+                            <label class="form-label">时间范围</label>
+                            <div class="input-group">
+                                <input type="date" class="form-control" id="startDate" name="start_date">
+                                <span class="input-group-text">至</span>
+                                <input type="date" class="form-control" id="endDate" name="end_date">
+                            </div>
+                        </div>
+                        
+                        <!-- 品牌选择 -->
+                        <div class="col-md-2">
+                            <label for="brand" class="form-label">品牌</label>
+                            <select class="form-select" id="brand" name="brand">
+                                <option value="">全部</option>
+                                <!-- 动态加载品牌选项 -->
+                            </select>
+                        </div>
+                        
+                        <!-- 价格区间 -->
+                        <div class="col-md-3">
+                            <label class="form-label">价格区间</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="minPrice" name="min_price" placeholder="最低价">
+                                <span class="input-group-text">-</span>
+                                <input type="number" class="form-control" id="maxPrice" name="max_price" placeholder="最高价">
+                            </div>
+                        </div>
+                        
+                        <!-- 地区选择 -->
+                        <div class="col-md-2">
+                            <label for="region" class="form-label">地区</label>
+                            <select class="form-select" id="region" name="region">
+                                <option value="">全部</option>
+                                <!-- 动态加载地区选项 -->
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-filter me-2"></i>应用筛选
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 图表网格 -->
+            {% if dashboard_charts %}
+            <div class="row" id="chartsGrid">
+                {% for dashboard_chart in dashboard_charts %}
+                <div class="col-md-6 col-lg-{{ dashboard_chart.width|default:6 }} mb-4">
+                    <div class="card h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">{{ dashboard_chart.chart.title }}</h5>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-secondary" 
+                                        onclick="viewChartDetail({{ dashboard_chart.chart.id }})">
+                                    <i class="fas fa-expand"></i>
+                                </button>
+                                {% if user == dashboard.created_by %}
+                                <button class="btn btn-outline-secondary" 
+                                        onclick="removeChart({{ dashboard_chart.id }})">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container" 
+                                 data-chart-id="{{ dashboard_chart.chart.id }}"
+                                 style="height: {{ dashboard_chart.height|default:300 }}px;">
+                                <!-- 图表将在这里渲染 -->
+                                <div class="d-flex align-items-center justify-content-center h-100">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">加载中...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">此仪表盘暂无图表</h4>
+                <p class="text-muted">请添加图表来完善您的仪表盘</p>
+                {% if user == dashboard.created_by %}
+                <button class="btn btn-primary" onclick="editDashboard()">
+                    <i class="fas fa-plus me-2"></i>添加图表
+                </button>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 初始化所有图表
+    initializeCharts();
+    
+    // 绑定全局筛选表单
+    document.getElementById('globalFilterForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        applyGlobalFilters();
+    });
+});
+
+function initializeCharts() {
+    const chartContainers = document.querySelectorAll('.chart-container');
+    
+    chartContainers.forEach(container => {
+        const chartId = container.dataset.chartId;
+        loadChart(chartId, container);
+    });
+}
+
+function loadChart(chartId, container) {
+    // 获取当前筛选条件
+    const filters = getGlobalFilters();
+    
+    fetch(`/visualization/charts/${chartId}/data/?${new URLSearchParams(filters)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                container.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        加载失败：${data.error}
+                    </div>
+                `;
+                return;
+            }
+            
+            // 初始化ECharts
+            const chart = echarts.init(container);
+            
+            // 根据图表类型设置配置
+            const option = generateChartOption(data);
+            chart.setOption(option);
+            
+            // 响应式调整
+            window.addEventListener('resize', () => {
+                chart.resize();
+            });
+        })
+        .catch(error => {
+            console.error('Error loading chart:', error);
+            container.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    加载失败
+                </div>
+            `;
+        });
+}
+
+function generateChartOption(data) {
+    // 基础配置
+    const option = {
+        tooltip: {
+            trigger: 'axis'
+        },
+        legend: {
+            data: data.datasets.map(d => d.label)
+        },
+        xAxis: {
+            type: 'category',
+            data: data.labels
+        },
+        yAxis: {
+            type: 'value'
+        },
+        series: data.datasets.map(dataset => ({
+            name: dataset.label,
+            type: 'line', // 默认类型，实际应根据图表类型调整
+            data: dataset.data
+        }))
+    };
+    
+    return option;
+}
+
+function getGlobalFilters() {
+    const form = document.getElementById('globalFilterForm');
+    const formData = new FormData(form);
+    const filters = {};
+    
+    for (let [key, value] of formData.entries()) {
+        if (value) {
+            filters[key] = value;
+        }
+    }
+    
+    return filters;
+}
+
+function applyGlobalFilters() {
+    // 重新加载所有图表
+    initializeCharts();
+}
+
+function refreshDashboard() {
+    // 刷新所有图表
+    initializeCharts();
+}
+
+function editDashboard() {
+    // 跳转到编辑页面（需要实现）
+    alert('编辑功能正在开发中');
+}
+
+function exportDashboard() {
+    // 导出仪表盘（需要实现）
+    alert('导出功能正在开发中');
+}
+
+function viewChartDetail(chartId) {
+    // 跳转到图表详情页面
+    window.open(`/visualization/charts/${chartId}/`, '_blank');
+}
+
+function removeChart(dashboardChartId) {
+    if (confirm('确定要从仪表盘中移除此图表吗？')) {
+        fetch(`/visualization/dashboard-charts/${dashboardChartId}/delete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('移除失败：' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('移除失败');
+        });
+    }
+}
+</script>
+{% endblock %}

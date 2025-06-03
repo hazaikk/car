@@ -14,7 +14,7 @@ python manage.py createsuperuser --username root --email admin@example.com
 cd /path/to/your/project
 git status
 git add .
-git commit -m "modify 完善前台可视化分析"
+git commit -m "add 增加前台车辆对比分析"
 git push origin main
 
 

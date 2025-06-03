@@ -116,7 +116,7 @@
     </div>
 </div>
 
-{% if latest_price_analysis or latest_brand_analysis or latest_region_analysis or latest_vehicle_analysis %}
+{% if latest_price_analysis or latest_region_analysis %}
 <div class="row">
     <div class="col-12 mb-4">
         <div class="card">
@@ -141,6 +141,21 @@
                     </div>
                     {% endif %}
                     
+                    {% if latest_region_analysis %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">地区分析 - {{ latest_region_analysis.get_analysis_type_display }}</h5>
+                            </div>
+                            <div class="card-body">
+                                <p>{{ latest_region_analysis.summary|truncatewords:50 }}</p>
+                            </div>
+                            <div class="card-footer">
+                                <a href="{% url 'car_analysis:data_analysis:region_analysis' %}?type={{ latest_region_analysis.analysis_type }}" class="btn btn-sm btn-outline-primary">查看详情</a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
 
                 </div>
             </div>

@@ -1,0 +1,136 @@
+{% extends "visualization/base.html" %}
+
+{% block visualization_content %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>所有仪表盘</h2>
+                <a href="{% url 'visualization:dashboard_create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>创建仪表盘
+                </a>
+            </div>
+
+            <!-- 筛选器 -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="search" class="form-label">搜索关键词</label>
+                            <input type="text" class="form-control" id="search" name="search" 
+                                   value="{{ request.GET.search }}" placeholder="搜索仪表盘标题或描述">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="creator" class="form-label">创建者</label>
+                            <select class="form-select" id="creator" name="creator">
+                                <option value="">全部</option>
+                                <option value="me" {% if request.GET.creator == 'me' %}selected{% endif %}>我的</option>
+                                <option value="public" {% if request.GET.creator == 'public' %}selected{% endif %}>公开的</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="sort" class="form-label">排序方式</label>
+                            <select class="form-select" id="sort" name="sort">
+                                <option value="-created_at" {% if request.GET.sort == '-created_at' %}selected{% endif %}>最新创建</option>
+                                <option value="created_at" {% if request.GET.sort == 'created_at' %}selected{% endif %}>最早创建</option>
+                                <option value="title" {% if request.GET.sort == 'title' %}selected{% endif %}>标题A-Z</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-outline-primary w-100">
+                                <i class="fas fa-search me-2"></i>筛选
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            {% if dashboards %}
+            <div class="row">
+                {% for dashboard in dashboards %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ dashboard.title }}</h5>
+                            <p class="card-text text-muted">{{ dashboard.description|default:"暂无描述" }}</p>
+                            <div class="mb-3">
+                                <small class="text-muted">
+                                    <i class="fas fa-user me-1"></i>{{ dashboard.created_by.username }}
+                                    <i class="fas fa-calendar ms-3 me-1"></i>{{ dashboard.created_at|date:"Y-m-d" }}
+                                </small>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    {% if dashboard.is_public %}
+                                    <span class="badge bg-success">公开</span>
+                                    {% else %}
+                                    <span class="badge bg-warning">私有</span>
+                                    {% endif %}
+                                </div>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'visualization:dashboard_detail' dashboard.id %}" class="btn btn-outline-primary">
+                                        <i class="fas fa-eye"></i> 查看
+                                    </a>
+                                    {% if user == dashboard.created_by %}
+                                    <a href="#" class="btn btn-outline-secondary">
+                                        <i class="fas fa-edit"></i> 编辑
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- 分页 -->
+            {% if dashboards.has_other_pages %}
+            <nav aria-label="仪表盘分页">
+                <ul class="pagination justify-content-center">
+                    {% if dashboards.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ dashboards.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.creator %}&creator={{ request.GET.creator }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">
+                            上一页
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in dashboards.paginator.page_range %}
+                    {% if dashboards.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% else %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.creator %}&creator={{ request.GET.creator }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">
+                            {{ num }}
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                    
+                    {% if dashboards.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ dashboards.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.creator %}&creator={{ request.GET.creator }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">
+                            下一页
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-tachometer-alt fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">暂无仪表盘</h4>
+                <p class="text-muted">还没有人创建仪表盘，成为第一个吧！</p>
+                <a href="{% url 'visualization:dashboard_create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>创建仪表盘
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

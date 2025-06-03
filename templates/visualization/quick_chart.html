@@ -1,0 +1,512 @@
+{% extends "visualization/base.html" %}
+
+{% block visualization_content %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="fas fa-magic me-2"></i>快速创建图表
+                        <small class="text-muted ms-2">- 简单三步，轻松创建</small>
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <!-- 步骤指示器 -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="progress" style="height: 3px;">
+                                <div class="progress-bar" role="progressbar" style="width: 33%" id="progressBar"></div>
+                            </div>
+                            <div class="d-flex justify-content-between mt-2">
+                                <span class="badge bg-primary step-indicator active" data-step="1">1. 选择数据</span>
+                                <span class="badge bg-secondary step-indicator" data-step="2">2. 选择图表</span>
+                                <span class="badge bg-secondary step-indicator" data-step="3">3. 完成设置</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form id="quickChartForm">
+                        {% csrf_token %}
+                        
+                        <!-- 步骤1: 选择数据 -->
+                        <div class="step-content" id="step1">
+                            <h5 class="mb-3">
+                                <i class="fas fa-database me-2"></i>第一步：选择要分析的数据
+                            </h5>
+                            <div class="row g-4">
+                                <div class="col-md-4">
+                    <div class="card data-option" data-type="sales" style="cursor: pointer;">
+                        <div class="card-body text-center">
+                            <i class="fas fa-chart-line fa-3x text-primary mb-3"></i>
+                            <h5>销量数据</h5>
+                            <p class="text-muted">分析车辆销量趋势</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card data-option" data-type="price" style="cursor: pointer;">
+                        <div class="card-body text-center">
+                            <i class="fas fa-dollar-sign fa-3x text-success mb-3"></i>
+                            <h5>价格数据</h5>
+                            <p class="text-muted">分析价格变化趋势</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card data-option" data-type="rating" style="cursor: pointer;">
+                        <div class="card-body text-center">
+                            <i class="fas fa-star fa-3x text-warning mb-3"></i>
+                            <h5>评分数据</h5>
+                            <p class="text-muted">分析用户评分情况</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 筛选选项 -->
+            <div class="row mt-4" id="filterOptions" style="display: none;">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">数据筛选选项</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="brandSelect">选择品牌</label>
+                                        <select class="form-control" id="brandSelect" multiple>
+                                            <option value="">加载中...</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="regionSelect">选择地区</label>
+                                        <select class="form-control" id="regionSelect" multiple>
+                                            <option value="">加载中...</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                            </div>
+                        </div>
+
+                        <!-- 步骤2: 选择图表类型 -->
+                        <div class="step-content d-none" id="step2">
+                            <h5 class="mb-3">
+                                <i class="fas fa-chart-bar me-2"></i>第二步：选择图表类型
+                            </h5>
+                            <div class="row g-4" id="chartTypeOptions">
+                                <!-- 动态生成图表类型选项 -->
+                            </div>
+                        </div>
+
+                        <!-- 步骤3: 完成设置 -->
+                        <div class="step-content d-none" id="step3">
+                            <h5 class="mb-3">
+                                <i class="fas fa-cog me-2"></i>第三步：完成设置
+                            </h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="chartTitle" class="form-label">图表标题</label>
+                                        <input type="text" class="form-control" id="chartTitle" name="title" placeholder="请输入图表标题">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="chartDescription" class="form-label">图表描述</label>
+                                        <textarea class="form-control" id="chartDescription" name="description" rows="3" placeholder="请输入图表描述（可选）"></textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="isPublic" name="is_public" checked>
+                                            <label class="form-check-label" for="isPublic">
+                                                公开图表（其他用户可以查看）
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h6 class="mb-0">图表预览</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="chartPreview" style="height: 250px;">
+                                                <div class="d-flex align-items-center justify-content-center h-100">
+                                                    <div class="text-center text-muted">
+                                                        <i class="fas fa-chart-line fa-2x mb-2"></i>
+                                                        <p>图表预览</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 操作按钮 -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <button type="button" class="btn btn-outline-secondary" id="prevBtn" onclick="previousStep()" style="display: none;">
+                                            <i class="fas fa-arrow-left me-2"></i>上一步
+                                        </button>
+                                    </div>
+                                    <div>
+                                        <a href="{% url 'visualization:chart_list' %}" class="btn btn-outline-secondary me-2">
+                                            <i class="fas fa-times me-2"></i>取消
+                                        </a>
+                                        <button type="button" class="btn btn-primary" id="nextBtn" onclick="nextStep()">
+                                            下一步<i class="fas fa-arrow-right ms-2"></i>
+                                        </button>
+                                        <button type="submit" class="btn btn-success" id="createBtn" style="display: none;">
+                                            <i class="fas fa-check me-2"></i>创建图表
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+.data-option:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+.data-option.selected {
+    border: 2px solid #007bff;
+    background-color: #f8f9fa;
+}
+
+.chart-option:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+.chart-option.selected {
+    border: 2px solid #007bff;
+    background-color: #f8f9fa;
+}
+
+.step-indicator.active {
+    background-color: #007bff !important;
+}
+
+.step-indicator.completed {
+    background-color: #28a745 !important;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+let currentStep = 1;
+let selectedDataType = '';
+let selectedChartType = '';
+let previewChart = null;
+
+// 图表类型配置
+const chartTypeConfigs = {
+    sales: [
+        { type: 'line', name: '折线图', icon: 'fas fa-chart-line', desc: '显示销量随时间的变化趋势' },
+        { type: 'bar', name: '柱状图', icon: 'fas fa-chart-bar', desc: '比较不同品牌或地区的销量' },
+        { type: 'pie', name: '饼图', icon: 'fas fa-chart-pie', desc: '显示销量占比分布' }
+    ],
+    price: [
+        { type: 'line', name: '折线图', icon: 'fas fa-chart-line', desc: '显示价格随时间的变化趋势' },
+        { type: 'bar', name: '柱状图', icon: 'fas fa-chart-bar', desc: '比较不同车型的价格' },
+        { type: 'scatter', name: '散点图', icon: 'fas fa-braille', desc: '分析价格与其他因素的关系' }
+    ],
+    rating: [
+        { type: 'bar', name: '柱状图', icon: 'fas fa-chart-bar', desc: '比较不同车型的评分' },
+        { type: 'pie', name: '饼图', icon: 'fas fa-chart-pie', desc: '显示评分等级分布' },
+        { type: 'line', name: '折线图', icon: 'fas fa-chart-line', desc: '显示评分随时间的变化' }
+    ]
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    // 绑定数据类型选择事件
+    document.querySelectorAll('.data-option').forEach(option => {
+        option.addEventListener('click', function() {
+            // 移除其他选中状态
+            document.querySelectorAll('.data-option').forEach(opt => opt.classList.remove('selected'));
+            // 添加选中状态
+            this.classList.add('selected');
+            selectedDataType = this.dataset.type;
+            
+            // 显示筛选选项
+            document.getElementById('filterOptions').style.display = 'block';
+            
+            // 加载筛选选项数据
+            loadFilterOptions();
+        });
+    });
+
+    // 表单提交处理
+    document.getElementById('quickChartForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        createChart();
+    });
+});
+
+function nextStep() {
+    if (currentStep === 1) {
+        if (!selectedDataType) {
+            alert('请选择数据类型');
+            return;
+        }
+        showChartTypeOptions();
+    } else if (currentStep === 2) {
+        if (!selectedChartType) {
+            alert('请选择图表类型');
+            return;
+        }
+        generatePreview();
+    }
+    
+    currentStep++;
+    updateStepDisplay();
+}
+
+function previousStep() {
+    currentStep--;
+    updateStepDisplay();
+}
+
+function updateStepDisplay() {
+    // 隐藏所有步骤内容
+    document.querySelectorAll('.step-content').forEach(content => {
+        content.classList.add('d-none');
+    });
+    
+    // 显示当前步骤
+    document.getElementById(`step${currentStep}`).classList.remove('d-none');
+    
+    // 更新进度条
+    const progress = (currentStep / 3) * 100;
+    document.getElementById('progressBar').style.width = progress + '%';
+    
+    // 更新步骤指示器
+    document.querySelectorAll('.step-indicator').forEach((indicator, index) => {
+        const step = index + 1;
+        indicator.classList.remove('active', 'completed');
+        if (step < currentStep) {
+            indicator.classList.add('completed');
+        } else if (step === currentStep) {
+            indicator.classList.add('active');
+        }
+    });
+    
+    // 更新按钮显示
+    document.getElementById('prevBtn').style.display = currentStep > 1 ? 'block' : 'none';
+    document.getElementById('nextBtn').style.display = currentStep < 3 ? 'block' : 'none';
+    document.getElementById('createBtn').style.display = currentStep === 3 ? 'block' : 'none';
+}
+
+function showChartTypeOptions() {
+    const container = document.getElementById('chartTypeOptions');
+    const configs = chartTypeConfigs[selectedDataType] || [];
+    
+    container.innerHTML = '';
+    
+    configs.forEach(config => {
+        const col = document.createElement('div');
+        col.className = 'col-md-4';
+        col.innerHTML = `
+            <div class="card chart-option" data-type="${config.type}" style="cursor: pointer;">
+                <div class="card-body text-center">
+                    <i class="${config.icon} fa-3x text-primary mb-3"></i>
+                    <h6>${config.name}</h6>
+                    <p class="text-muted small">${config.desc}</p>
+                </div>
+            </div>
+        `;
+        container.appendChild(col);
+    });
+    
+    // 绑定图表类型选择事件
+    document.querySelectorAll('.chart-option').forEach(option => {
+        option.addEventListener('click', function() {
+            document.querySelectorAll('.chart-option').forEach(opt => opt.classList.remove('selected'));
+            this.classList.add('selected');
+            selectedChartType = this.dataset.type;
+        });
+    });
+}
+
+function generatePreview() {
+    const container = document.getElementById('chartPreview');
+    
+    // 生成默认标题
+    const dataTypeNames = { sales: '销量', price: '价格', rating: '评分' };
+    const chartTypeNames = { line: '折线图', bar: '柱状图', pie: '饼图', scatter: '散点图' };
+    const defaultTitle = `${dataTypeNames[selectedDataType]}${chartTypeNames[selectedChartType]}`;
+    document.getElementById('chartTitle').value = defaultTitle;
+    
+    // 初始化图表
+    if (previewChart) {
+        previewChart.dispose();
+    }
+    previewChart = echarts.init(container);
+    
+    // 生成示例数据
+    const sampleData = generateSampleData();
+    const option = generateChartOption(sampleData);
+    previewChart.setOption(option);
+}
+
+function generateSampleData() {
+    // 根据数据类型生成示例数据
+    const labels = ['1月', '2月', '3月', '4月', '5月', '6月'];
+    let data;
+    
+    switch (selectedDataType) {
+        case 'sales':
+            data = [120, 200, 150, 80, 70, 110];
+            break;
+        case 'price':
+            data = [15.5, 16.2, 15.8, 16.5, 17.1, 16.8];
+            break;
+        case 'rating':
+            data = [4.2, 4.5, 4.3, 4.6, 4.4, 4.7];
+            break;
+        default:
+            data = [10, 20, 30, 40, 50, 60];
+    }
+    
+    return { labels, data };
+}
+
+function generateChartOption(sampleData) {
+    const option = {
+        title: {
+            text: document.getElementById('chartTitle').value || '图表预览',
+            left: 'center'
+        },
+        tooltip: {
+            trigger: selectedChartType === 'pie' ? 'item' : 'axis'
+        },
+        grid: {
+            left: '3%',
+            right: '4%',
+            bottom: '3%',
+            containLabel: true
+        }
+    };
+    
+    if (selectedChartType === 'pie') {
+        option.series = [{
+            type: 'pie',
+            radius: '50%',
+            data: sampleData.labels.map((label, index) => ({
+                name: label,
+                value: sampleData.data[index]
+            }))
+        }];
+    } else {
+        option.xAxis = {
+            type: 'category',
+            data: sampleData.labels
+        };
+        option.yAxis = {
+            type: 'value'
+        };
+        option.series = [{
+            type: selectedChartType,
+            data: sampleData.data
+        }];
+    }
+    
+    return option;
+}
+
+function loadFilterOptions() {
+    fetch('{% url "visualization:get_filter_options" %}')
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const filterData = data.data;
+            
+            // 填充品牌选项
+            const brandSelect = document.getElementById('brandSelect');
+            brandSelect.innerHTML = '<option value="">全部品牌</option>';
+            filterData.brands.forEach(brand => {
+                const option = document.createElement('option');
+                option.value = brand.name;
+                option.textContent = brand.name;
+                brandSelect.appendChild(option);
+            });
+            
+            // 填充地区选项
+            const regionSelect = document.getElementById('regionSelect');
+            regionSelect.innerHTML = '<option value="">全部地区</option>';
+            filterData.regions.forEach(region => {
+                const option = document.createElement('option');
+                option.value = region.name;
+                option.textContent = region.name;
+                regionSelect.appendChild(option);
+            });
+        } else {
+            console.error('加载筛选选项失败:', data.error);
+            document.getElementById('brandSelect').innerHTML = '<option value="">加载失败</option>';
+            document.getElementById('regionSelect').innerHTML = '<option value="">加载失败</option>';
+        }
+    })
+    .catch(error => {
+        console.error('Error loading filter options:', error);
+        document.getElementById('brandSelect').innerHTML = '<option value="">加载失败</option>';
+        document.getElementById('regionSelect').innerHTML = '<option value="">加载失败</option>';
+    });
+}
+
+function createChart() {
+    const formData = {
+        title: document.getElementById('chartTitle').value,
+        description: document.getElementById('chartDescription').value,
+        chart_type: selectedChartType,
+        data_type: selectedDataType,
+        is_public: document.getElementById('isPublic').checked
+    };
+    
+    fetch('{% url "visualization:chart_create" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.href = `/visualization/charts/${data.chart_id}/`;
+        } else {
+            alert('创建失败：' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('创建失败，请重试');
+    });
+}
+</script>
+{% endblock %}

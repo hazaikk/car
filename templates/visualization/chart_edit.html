@@ -1,0 +1,320 @@
+{% extends "visualization/base.html" %}
+
+{% block visualization_content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="fas fa-edit me-2"></i>编辑图表
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form id="chartEditForm" method="post">
+                        {% csrf_token %}
+                        
+                        <!-- 基本信息 -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="border-bottom pb-2 mb-3">
+                                    <i class="fas fa-info-circle me-2"></i>基本信息
+                                </h5>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="title" class="form-label">图表标题 <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="title" name="title" 
+                                       value="{{ chart.title }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="description" class="form-label">图表描述</label>
+                                <textarea class="form-control" id="description" name="description" 
+                                          rows="3">{{ chart.description }}</textarea>
+                            </div>
+                        </div>
+
+                        <!-- 图表类型 -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="border-bottom pb-2 mb-3">
+                                    <i class="fas fa-chart-bar me-2"></i>图表类型
+                                </h5>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="chart_type" class="form-label">图表类型 <span class="text-danger">*</span></label>
+                                <select class="form-select" id="chart_type" name="chart_type" required>
+                                    <option value="line" {% if chart.chart_type == 'line' %}selected{% endif %}>折线图</option>
+                                    <option value="bar" {% if chart.chart_type == 'bar' %}selected{% endif %}>柱状图</option>
+                                    <option value="pie" {% if chart.chart_type == 'pie' %}selected{% endif %}>饼图</option>
+                                    <option value="scatter" {% if chart.chart_type == 'scatter' %}selected{% endif %}>散点图</option>
+                                    <option value="area" {% if chart.chart_type == 'area' %}selected{% endif %}>面积图</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="data_type" class="form-label">数据类型 <span class="text-danger">*</span></label>
+                                <select class="form-select" id="data_type" name="data_type" required>
+                                    <option value="sales" {% if chart.data_type == 'sales' %}selected{% endif %}>销量数据</option>
+                                    <option value="price" {% if chart.data_type == 'price' %}selected{% endif %}>价格数据</option>
+                                    <option value="rating" {% if chart.data_type == 'rating' %}selected{% endif %}>评分数据</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- 数据配置 -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="border-bottom pb-2 mb-3">
+                                    <i class="fas fa-cog me-2"></i>数据配置
+                                </h5>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="x_axis_field" class="form-label">X轴字段</label>
+                                <select class="form-select" id="x_axis_field" name="x_axis_field">
+                                    <option value="date" {% if chart.x_axis_field == 'date' %}selected{% endif %}>日期</option>
+                                    <option value="brand" {% if chart.x_axis_field == 'brand' %}selected{% endif %}>品牌</option>
+                                    <option value="model" {% if chart.x_axis_field == 'model' %}selected{% endif %}>车型</option>
+                                    <option value="region" {% if chart.x_axis_field == 'region' %}selected{% endif %}>地区</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="y_axis_field" class="form-label">Y轴字段</label>
+                                <select class="form-select" id="y_axis_field" name="y_axis_field">
+                                    <option value="sales_count" {% if chart.y_axis_field == 'sales_count' %}selected{% endif %}>销量</option>
+                                    <option value="price" {% if chart.y_axis_field == 'price' %}selected{% endif %}>价格</option>
+                                    <option value="rating" {% if chart.y_axis_field == 'rating' %}selected{% endif %}>评分</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- 可见性设置 -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="border-bottom pb-2 mb-3">
+                                    <i class="fas fa-eye me-2"></i>可见性设置
+                                </h5>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="is_public" 
+                                           name="is_public" {% if chart.is_public %}checked{% endif %}>
+                                    <label class="form-check-label" for="is_public">
+                                        公开图表（其他用户可以查看）
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 图表预览 -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="border-bottom pb-2 mb-3">
+                                    <i class="fas fa-eye me-2"></i>图表预览
+                                </h5>
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div id="chartPreview" style="height: 400px;">
+                                            <div class="d-flex align-items-center justify-content-center h-100">
+                                                <div class="text-center">
+                                                    <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                                                    <p class="text-muted">图表预览将在这里显示</p>
+                                                    <button type="button" class="btn btn-outline-primary" onclick="updatePreview()">
+                                                        <i class="fas fa-sync-alt me-2"></i>更新预览
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 操作按钮 -->
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <a href="{% url 'visualization:chart_detail' chart.id %}" class="btn btn-outline-secondary">
+                                            <i class="fas fa-arrow-left me-2"></i>返回
+                                        </a>
+                                    </div>
+                                    <div>
+                                        <button type="button" class="btn btn-outline-primary me-2" onclick="updatePreview()">
+                                            <i class="fas fa-eye me-2"></i>预览
+                                        </button>
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-save me-2"></i>保存修改
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+let previewChart = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // 初始化预览图表
+    updatePreview();
+    
+    // 监听表单变化
+    const form = document.getElementById('chartEditForm');
+    const inputs = form.querySelectorAll('select, input[type="text"], textarea');
+    
+    inputs.forEach(input => {
+        input.addEventListener('change', function() {
+            // 可以在这里添加自动预览更新
+        });
+    });
+});
+
+function updatePreview() {
+    const form = document.getElementById('chartEditForm');
+    const formData = new FormData(form);
+    
+    // 显示加载状态
+    const previewContainer = document.getElementById('chartPreview');
+    previewContainer.innerHTML = '<div class="text-center p-4"><i class="fas fa-spinner fa-spin"></i> 正在生成预览...</div>';
+    
+    fetch('{% url "visualization:chart_preview" chart.id %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Preview data:', data);
+        
+        if (!data.labels || !data.datasets || data.datasets.length === 0) {
+            previewContainer.innerHTML = '<div class="text-center p-4 text-warning"><i class="fas fa-exclamation-triangle"></i> 暂无数据可预览</div>';
+            return;
+        }
+        
+        // 销毁旧的图表实例
+        if (window.previewChart) {
+            window.previewChart.dispose();
+        }
+        
+        // 创建新的图表容器
+        previewContainer.innerHTML = '<div id="previewChartContainer" style="width: 100%; height: 400px;"></div>';
+        
+        // 初始化新的ECharts实例
+        const chartDom = document.getElementById('previewChartContainer');
+        window.previewChart = echarts.init(chartDom);
+        
+        // 生成图表配置
+        const option = generateChartOption(data, formData.get('chart_type'));
+        window.previewChart.setOption(option, true);
+    })
+    .catch(error => {
+        console.error('Preview error:', error);
+        previewContainer.innerHTML = '<div class="text-center p-4 text-danger"><i class="fas fa-exclamation-triangle"></i> 预览生成失败，请检查网络连接</div>';
+    });
+}
+
+function generateChartOption(data) {
+    const chartType = document.getElementById('chart_type').value;
+    
+    // 基础配置
+    const option = {
+        title: {
+            text: document.getElementById('title').value || '图表预览',
+            left: 'center'
+        },
+        tooltip: {
+            trigger: chartType === 'pie' ? 'item' : 'axis'
+        },
+        legend: {
+            data: data.datasets ? data.datasets.map(d => d.label) : [],
+            top: 'bottom'
+        },
+        grid: {
+            left: '3%',
+            right: '4%',
+            bottom: '15%',
+            containLabel: true
+        }
+    };
+    
+    // 根据图表类型设置不同的配置
+    if (chartType === 'pie') {
+        option.series = [{
+            name: '数据',
+            type: 'pie',
+            radius: '50%',
+            data: data.labels ? data.labels.map((label, index) => ({
+                name: label,
+                value: data.datasets[0] ? data.datasets[0].data[index] : 0
+            })) : [],
+            emphasis: {
+                itemStyle: {
+                    shadowBlur: 10,
+                    shadowOffsetX: 0,
+                    shadowColor: 'rgba(0, 0, 0, 0.5)'
+                }
+            }
+        }];
+    } else {
+        option.xAxis = {
+            type: 'category',
+            data: data.labels || []
+        };
+        option.yAxis = {
+            type: 'value'
+        };
+        option.series = data.datasets ? data.datasets.map(dataset => ({
+            name: dataset.label,
+            type: chartType === 'area' ? 'line' : chartType,
+            data: dataset.data,
+            areaStyle: chartType === 'area' ? {} : undefined
+        })) : [];
+    }
+    
+    return option;
+}
+
+// 表单提交处理
+document.getElementById('chartEditForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    fetch(window.location.href, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        },
+    })
+    .then(response => {
+        if (response.ok) {
+            // 成功后跳转到图表详情页
+            window.location.href = `/visualization/charts/{{ chart.id }}/`;
+        } else {
+            return response.json().then(data => {
+                throw new Error(data.error || '保存失败');
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('保存失败：' + error.message);
+    });
+});
+</script>
+{% endblock %}

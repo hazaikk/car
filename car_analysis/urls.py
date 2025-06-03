@@ -4,7 +4,6 @@ from . import views
 app_name = 'car_analysis'
 
 urlpatterns = [
-    path('', views.index, name='index'),
     path('comparison/', views.comparison, name='comparison'),
     path('comparison/data/', views.comparison_data, name='comparison_data'),
     path('sales/<int:car_id>/', views.sales_prediction, name='sales_prediction'),

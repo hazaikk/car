@@ -14,7 +14,7 @@
                     <i class="fas fa-user-chart me-2"></i>我的图表
                 </a>
                 <a href="{% url 'visualization:chart_create' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'chart_create' %}active{% endif %}">
-                    <i class="fas fa-plus me-2"></i>创建图表
+                    <i class="fas fa-plus-circle me-2"></i>创建图表
                 </a>
                 {% endif %}
                 <a href="{% url 'visualization:dashboard_list' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'dashboard_list' %}active{% endif %}">
@@ -45,4 +45,4 @@
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
-{% endblock %} 
+{% endblock %}

@@ -1,0 +1,238 @@
+{% extends "visualization/base.html" %}
+
+{% block visualization_content %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">创建新仪表盘</h4>
+                </div>
+                <div class="card-body">
+                    <form id="dashboardForm" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        <!-- 基本信息 -->
+                        <div class="mb-4">
+                            <h5>基本信息</h5>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="title" class="form-label">仪表盘标题 *</label>
+                                    <input type="text" class="form-control" id="title" name="title" required>
+                                    <div class="invalid-feedback">
+                                        请输入仪表盘标题
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="description" class="form-label">仪表盘描述</label>
+                                    <input type="text" class="form-control" id="description" name="description">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 可见性设置 -->
+                        <div class="mb-4">
+                            <h5>可见性设置</h5>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="isPublic" name="is_public" checked>
+                                <label class="form-check-label" for="isPublic">
+                                    公开仪表盘（其他用户可以查看）
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- 选择图表 -->
+                        <div class="mb-4">
+                            <h5>选择图表</h5>
+                            <p class="text-muted">选择要添加到仪表盘中的图表</p>
+                            
+                            {% if available_charts %}
+                            <div class="row" id="chartSelection">
+                                {% for chart in available_charts %}
+                                <div class="col-md-6 col-lg-4 mb-3">
+                                    <div class="card chart-card" data-chart-id="{{ chart.id }}">
+                                        <div class="card-body">
+                                            <div class="form-check">
+                                                <input class="form-check-input chart-checkbox" type="checkbox" 
+                                                       id="chart_{{ chart.id }}" value="{{ chart.id }}">
+                                                <label class="form-check-label w-100" for="chart_{{ chart.id }}">
+                                                    <h6 class="card-title mb-2">{{ chart.title }}</h6>
+                                                    <p class="card-text text-muted small mb-2">{{ chart.description|default:"暂无描述" }}</p>
+                                                    <div>
+                                                        <span class="badge bg-primary me-1">{{ chart.get_chart_type_display }}</span>
+                                                        <span class="badge bg-secondary">{{ chart.get_data_type_display }}</span>
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                暂无可用图表。请先<a href="{% url 'visualization:chart_create' %}" class="alert-link">创建图表</a>后再创建仪表盘。
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- 布局预览 -->
+                        <div class="mb-4">
+                            <h5>布局预览</h5>
+                            <div id="layoutPreview" class="border rounded p-3" style="min-height: 300px; background-color: #f8f9fa;">
+                                <div class="text-center text-muted py-5">
+                                    <i class="fas fa-th-large fa-2x mb-3"></i>
+                                    <p>选择图表后将显示布局预览</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 提交按钮 -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'visualization:my_dashboards' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>返回
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>创建仪表盘
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('dashboardForm');
+    const chartCheckboxes = document.querySelectorAll('.chart-checkbox');
+    const layoutPreview = document.getElementById('layoutPreview');
+    
+    // 监听图表选择变化
+    chartCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateLayoutPreview);
+    });
+    
+    function updateLayoutPreview() {
+        const selectedCharts = Array.from(chartCheckboxes)
+            .filter(cb => cb.checked)
+            .map(cb => {
+                const card = cb.closest('.chart-card');
+                const title = card.querySelector('.card-title').textContent;
+                return { id: cb.value, title: title };
+            });
+        
+        if (selectedCharts.length === 0) {
+            layoutPreview.innerHTML = `
+                <div class="text-center text-muted py-5">
+                    <i class="fas fa-th-large fa-2x mb-3"></i>
+                    <p>选择图表后将显示布局预览</p>
+                </div>
+            `;
+            return;
+        }
+        
+        let previewHtml = '<div class="row">';
+        selectedCharts.forEach((chart, index) => {
+            const colClass = selectedCharts.length === 1 ? 'col-12' : 
+                           selectedCharts.length === 2 ? 'col-md-6' : 
+                           'col-md-6 col-lg-4';
+            
+            previewHtml += `
+                <div class="${colClass} mb-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h6>${chart.title}</h6>
+                            <div class="bg-light rounded" style="height: 150px; display: flex; align-items: center; justify-content: center;">
+                                <i class="fas fa-chart-bar fa-2x text-muted"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        previewHtml += '</div>';
+        
+        layoutPreview.innerHTML = previewHtml;
+    }
+    
+    // 表单提交
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        if (!form.checkValidity()) {
+            e.stopPropagation();
+            form.classList.add('was-validated');
+            return;
+        }
+        
+        const selectedCharts = Array.from(chartCheckboxes)
+            .filter(cb => cb.checked)
+            .map((cb, index) => ({
+                chart_id: parseInt(cb.value),
+                position_x: (index % 2) * 6,
+                position_y: Math.floor(index / 2) * 4,
+                width: 6,
+                height: 4
+            }));
+        
+        if (selectedCharts.length === 0) {
+            alert('请至少选择一个图表');
+            return;
+        }
+        
+        const formData = {
+            title: document.getElementById('title').value,
+            description: document.getElementById('description').value,
+            is_public: document.getElementById('isPublic').checked,
+            charts: selectedCharts
+        };
+        
+        fetch('{% url "visualization:dashboard_create" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.href = `/visualization/dashboards/${data.dashboard_id}/`;
+            } else {
+                alert('创建失败：' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('创建失败');
+        });
+    });
+});
+</script>
+
+<style>
+.chart-card {
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.chart-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.chart-checkbox:checked + label .card-title {
+    color: #0d6efd;
+}
+
+.chart-checkbox:checked ~ * {
+    background-color: #e7f3ff;
+}
+</style>
+{% endblock %}

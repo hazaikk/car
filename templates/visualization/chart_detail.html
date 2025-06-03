@@ -43,10 +43,7 @@
                         <div class="col-md-2">
                             <label for="brand" class="form-label">品牌</label>
                             <select class="form-select" id="brand" name="brand">
-                                <option value="">全部</option>
-                                {% for brand in brands %}
-                                <option value="{{ brand.id }}">{{ brand.name }}</option>
-                                {% endfor %}
+                                <option value="">加载中...</option>
                             </select>
                         </div>
                         
@@ -64,10 +61,7 @@
                         <div class="col-md-2">
                             <label for="region" class="form-label">地区</label>
                             <select class="form-select" id="region" name="region">
-                                <option value="">全部</option>
-                                {% for region in regions %}
-                                <option value="{{ region.id }}">{{ region.name }}</option>
-                                {% endfor %}
+                                <option value="">加载中...</option>
                             </select>
                         </div>
                         
@@ -98,36 +92,163 @@ document.addEventListener('DOMContentLoaded', function() {
     var myChart = echarts.init(chartDom);
     var option;
 
+    // 加载筛选选项
+    function loadFilterOptions() {
+        fetch('{% url "visualization:get_filter_options" %}')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const filterData = data.data;
+                
+                // 填充品牌选项
+                const brandSelect = document.getElementById('brand');
+                brandSelect.innerHTML = '<option value="">全部品牌</option>';
+                filterData.brands.forEach(brand => {
+                    const option = document.createElement('option');
+                    option.value = brand.name;
+                    option.textContent = brand.name;
+                    brandSelect.appendChild(option);
+                });
+                
+                // 填充地区选项
+                const regionSelect = document.getElementById('region');
+                regionSelect.innerHTML = '<option value="">全部地区</option>';
+                filterData.regions.forEach(region => {
+                    const option = document.createElement('option');
+                    option.value = region.name;
+                    option.textContent = region.name;
+                    regionSelect.appendChild(option);
+                });
+            } else {
+                console.error('加载筛选选项失败:', data.error);
+                document.getElementById('brand').innerHTML = '<option value="">加载失败</option>';
+                document.getElementById('region').innerHTML = '<option value="">加载失败</option>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading filter options:', error);
+            document.getElementById('brand').innerHTML = '<option value="">加载失败</option>';
+            document.getElementById('region').innerHTML = '<option value="">加载失败</option>';
+        });
+    }
+
     // 加载图表数据
     function loadChartData(filters = {}) {
         fetch("{% url 'visualization:chart_data' chart.id %}" + '?' + new URLSearchParams(filters))
             .then(response => response.json())
             .then(data => {
-                option = {
+                console.log('Chart data received:', data);
+                
+                if (!data.labels || !data.datasets || data.datasets.length === 0) {
+                    console.error('Invalid chart data:', data);
+                    return;
+                }
+                
+                let option = {
                     title: {
-                        text: '{{ chart.title }}'
+                        text: '{{ chart.title }}',
+                        left: 'center'
                     },
-                    tooltip: {
-                        trigger: 'axis'
-                    },
+                    tooltip: {},
                     legend: {
-                        data: data.legend
-                    },
-                    xAxis: {
-                        type: 'category',
-                        data: data.labels
-                    },
-                    yAxis: {
-                        type: 'value'
-                    },
-                    series: data.datasets
+                        data: data.legend || [],
+                        top: 'bottom'
+                    }
                 };
-                myChart.setOption(option);
+                
+                const chartType = '{{ chart.chart_type }}';
+                
+                // 根据图表类型配置不同的选项
+                if (chartType === 'pie') {
+                    option.tooltip = {
+                        trigger: 'item',
+                        formatter: '{a} <br/>{b}: {c} ({d}%)'
+                    };
+                    option.series = [{
+                        name: data.datasets[0].label || '数据',
+                        type: 'pie',
+                        radius: ['40%', '70%'],
+                        center: ['50%', '50%'],
+                        data: data.labels.map((label, index) => ({
+                            name: label,
+                            value: data.datasets[0].data[index] || 0
+                        })),
+                        emphasis: {
+                            itemStyle: {
+                                shadowBlur: 10,
+                                shadowOffsetX: 0,
+                                shadowColor: 'rgba(0, 0, 0, 0.5)'
+                            }
+                        }
+                    }];
+                } else if (chartType === 'radar') {
+                    option.tooltip = {
+                        trigger: 'item'
+                    };
+                    const maxValue = Math.max(...data.datasets[0].data) * 1.2;
+                    option.radar = {
+                        indicator: data.labels.map(label => ({ 
+                            name: label, 
+                            max: maxValue > 0 ? maxValue : 100
+                        })),
+                        center: ['50%', '50%'],
+                        radius: '60%'
+                    };
+                    option.series = [{
+                        name: data.datasets[0].label || '数据',
+                        type: 'radar',
+                        data: [{
+                            value: data.datasets[0].data,
+                            name: data.datasets[0].label || '数据',
+                            areaStyle: {
+                                opacity: 0.3
+                            }
+                        }]
+                    }];
+                } else {
+                    // 折线图和柱状图
+                    option.tooltip = {
+                        trigger: 'axis',
+                        axisPointer: {
+                            type: 'shadow'
+                        }
+                    };
+                    option.grid = {
+                        left: '3%',
+                        right: '4%',
+                        bottom: '10%',
+                        containLabel: true
+                    };
+                    option.xAxis = {
+                        type: 'category',
+                        data: data.labels,
+                        axisTick: {
+                            alignWithLabel: true
+                        }
+                    };
+                    option.yAxis = {
+                        type: 'value'
+                    };
+                    
+                    const seriesType = chartType === 'line' ? 'line' : 'bar';
+                    option.series = data.datasets.map(dataset => ({
+                        name: dataset.label || '数据',
+                        type: seriesType,
+                        data: dataset.data || [],
+                        smooth: seriesType === 'line',
+                        emphasis: {
+                            focus: 'series'
+                        }
+                    }));
+                }
+                
+                myChart.setOption(option, true);
             })
             .catch(error => console.error('Error:', error));
     }
 
     // 初始加载
+    loadFilterOptions();
     loadChartData();
 
     // 监听筛选表单提交
@@ -174,4 +295,4 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
-{% endblock %} 
+{% endblock %}

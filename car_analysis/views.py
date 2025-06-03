@@ -12,10 +12,7 @@ from decimal import Decimal
 
 # Create your views here.
 
-@login_required
-def index(request):
-    """智能分析首页"""
-    return render(request, 'car_analysis/index.html')
+
 
 @login_required
 def comparison(request):

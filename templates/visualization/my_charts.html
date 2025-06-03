@@ -1,0 +1,170 @@
+{% extends "visualization/base.html" %}
+
+{% block visualization_content %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>我的图表</h2>
+                <div>
+                    <button id="selectAllBtn" class="btn btn-outline-secondary me-2" onclick="toggleSelectAll()">
+                        <i class="fas fa-check-square me-2"></i>全选
+                    </button>
+                    <button id="deleteSelectedBtn" class="btn btn-outline-danger me-2" onclick="deleteSelected()" disabled>
+                        <i class="fas fa-trash me-2"></i>删除选中
+                    </button>
+                    <a href="{% url 'visualization:chart_create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>创建新图表
+                    </a>
+                </div>
+            </div>
+
+            {% if charts %}
+            <div class="row">
+                {% for chart in charts %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <div class="form-check">
+                                <input class="form-check-input chart-checkbox" type="checkbox" value="{{ chart.id }}" id="chart_{{ chart.id }}" onchange="updateDeleteButton()">
+                                <label class="form-check-label" for="chart_{{ chart.id }}">
+                                    选择
+                                </label>
+                            </div>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteChart({{ chart.id }})" title="删除图表">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <h5 class="card-title">{{ chart.title }}</h5>
+                            <p class="card-text text-muted">{{ chart.description|default:"暂无描述" }}</p>
+                            <div class="mb-3">
+                                <span class="badge bg-primary me-2">{{ chart.get_chart_type_display }}</span>
+                                <span class="badge bg-secondary">{{ chart.get_data_type_display }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">{{ chart.created_at|date:"Y-m-d" }}</small>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'visualization:chart_detail' chart.id %}" class="btn btn-outline-primary">
+                                        <i class="fas fa-eye"></i> 查看
+                                    </a>
+                                    <a href="{% url 'visualization:chart_edit' chart.id %}" class="btn btn-outline-secondary">
+                                        <i class="fas fa-edit"></i> 编辑
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">您还没有创建任何图表</h4>
+                <p class="text-muted">点击上方按钮创建您的第一个图表</p>
+                <a href="{% url 'visualization:chart_create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>创建图表
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+// 全选/取消全选功能
+function toggleSelectAll() {
+    const checkboxes = document.querySelectorAll('.chart-checkbox');
+    const selectAllBtn = document.getElementById('selectAllBtn');
+    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+    
+    checkboxes.forEach(cb => {
+        cb.checked = !allChecked;
+    });
+    
+    if (allChecked) {
+        selectAllBtn.innerHTML = '<i class="fas fa-check-square me-2"></i>全选';
+    } else {
+        selectAllBtn.innerHTML = '<i class="fas fa-minus-square me-2"></i>取消全选';
+    }
+    
+    updateDeleteButton();
+}
+
+// 更新删除按钮状态
+function updateDeleteButton() {
+    const checkboxes = document.querySelectorAll('.chart-checkbox');
+    const deleteBtn = document.getElementById('deleteSelectedBtn');
+    const selectAllBtn = document.getElementById('selectAllBtn');
+    
+    const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+    
+    deleteBtn.disabled = checkedCount === 0;
+    
+    if (allChecked && checkboxes.length > 0) {
+        selectAllBtn.innerHTML = '<i class="fas fa-minus-square me-2"></i>取消全选';
+    } else {
+        selectAllBtn.innerHTML = '<i class="fas fa-check-square me-2"></i>全选';
+    }
+}
+
+// 删除选中的图表
+function deleteSelected() {
+    const checkboxes = document.querySelectorAll('.chart-checkbox:checked');
+    const chartIds = Array.from(checkboxes).map(cb => cb.value);
+    
+    if (chartIds.length === 0) {
+        alert('请选择要删除的图表');
+        return;
+    }
+    
+    if (confirm(`确定要删除选中的 ${chartIds.length} 个图表吗？此操作不可撤销。`)) {
+        deleteCharts(chartIds);
+    }
+}
+
+// 删除单个图表
+function deleteChart(chartId) {
+    if (confirm('确定要删除这个图表吗？此操作不可撤销。')) {
+        deleteCharts([chartId]);
+    }
+}
+
+// 执行删除操作
+function deleteCharts(chartIds) {
+    fetch('{% url "visualization:chart_delete" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({
+            chart_ids: chartIds
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('删除失败：' + (data.error || '未知错误'));
+        }
+    })
+    .catch(error => {
+        console.error('删除失败:', error);
+        alert('删除失败，请检查网络连接');
+    });
+}
+
+// 页面加载完成后初始化
+document.addEventListener('DOMContentLoaded', function() {
+    updateDeleteButton();
+});
+</script>
+
+<!-- CSRF Token -->
+{% csrf_token %}
+
+{% endblock %}
