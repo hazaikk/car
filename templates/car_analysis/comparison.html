@@ -1,38 +1,48 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block content %}
+{% csrf_token %}
 <div class="container mt-4">
-    <h2>竞品对比</h2>
+    <h2>竞品对比分析</h2>
     
     <!-- 车型选择 -->
     <div class="card mt-4">
         <div class="card-body">
             <h5 class="card-title">选择对比车型</h5>
-            <div class="row">
-                <div class="col-md-4">
-                    <select class="form-select" id="car1">
-                        <option selected>选择第一个车型...</option>
-                    </select>
+            <div id="carSelectionContainer">
+                <!-- 基础两个车型选择 -->
+                <div class="row car-selection-row" data-index="0">
+                    <div class="col-md-5">
+                        <label class="form-label">车型1</label>
+                        <select class="form-select car-select" size="6" style="height: 150px; overflow-y: auto;">
+                            <option value="">选择第一个车型...</option>
+                        </select>
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label">车型2</label>
+                        <select class="form-select car-select" size="6" style="height: 150px; overflow-y: auto;">
+                            <option value="">选择第二个车型...</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button class="btn btn-success btn-sm" id="addCarBtn" title="添加车型">
+                            <i class="fas fa-plus"></i> 添加车型
+                        </button>
+                    </div>
                 </div>
-                <div class="col-md-4">
-                    <select class="form-select" id="car2">
-                        <option selected>选择第二个车型...</option>
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <select class="form-select" id="car3">
-                        <option selected>选择第三个车型...</option>
-                    </select>
-                </div>
+                <!-- 额外车型选择区域 -->
+                <div id="additionalCarsContainer"></div>
             </div>
             <div class="text-center mt-3">
-                <button class="btn btn-primary" id="compareBtn">开始对比</button>
+                <button class="btn btn-primary" id="startComparison">开始对比</button>
+                <button class="btn btn-secondary ms-2" id="exportChartsBtn" style="display: none;">导出图表</button>
             </div>
         </div>
     </div>
     
     <!-- 对比结果 -->
-    <div class="row mt-4">
+    <div class="row mt-4" id="comparisonResults" style="display: none;">
         <!-- 基本信息对比 -->
         <div class="col-12">
             <div class="card">
@@ -41,34 +51,15 @@
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-bordered">
+                        <table class="table table-bordered" id="basicInfoTable">
                             <thead>
                                 <tr>
                                     <th>对比项</th>
-                                    <th>车型1</th>
-                                    <th>车型2</th>
-                                    <th>车型3</th>
+                                    <!-- 动态生成车型表头 -->
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr>
-                                    <td>厂商指导价</td>
-                                    <td>-</td>
-                                    <td>-</td>
-                                    <td>-</td>
-                                </tr>
-                                <tr>
-                                    <td>上市时间</td>
-                                    <td>-</td>
-                                    <td>-</td>
-                                    <td>-</td>
-                                </tr>
-                                <tr>
-                                    <td>销量</td>
-                                    <td>-</td>
-                                    <td>-</td>
-                                    <td>-</td>
-                                </tr>
+                                <!-- 动态填充数据 -->
                             </tbody>
                         </table>
                     </div>
@@ -79,8 +70,11 @@
         <!-- 性能参数对比 -->
         <div class="col-12 mt-4">
             <div class="card">
-                <div class="card-header">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">性能参数对比</h5>
+                    <button class="btn btn-outline-primary btn-sm" onclick="exportChart('performanceChart', '性能参数对比')">
+                        <i class="fas fa-download"></i> 导出图片
+                    </button>
                 </div>
                 <div class="card-body">
                     <div id="performanceChart" style="height: 400px;"></div>
@@ -91,8 +85,11 @@
         <!-- 用户评价对比 -->
         <div class="col-12 mt-4">
             <div class="card">
-                <div class="card-header">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">用户评价对比</h5>
+                    <button class="btn btn-outline-primary btn-sm" onclick="exportChart('ratingChart', '用户评价对比')">
+                        <i class="fas fa-download"></i> 导出图片
+                    </button>
                 </div>
                 <div class="card-body">
                     <div id="ratingChart" style="height: 400px;"></div>
@@ -114,6 +111,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // 存储选中的车型数据
     let selectedCars = [];
     let comparisonData = {};
+    let carCount = 2; // 当前车型数量，初始为2
+    const maxCars = 5; // 最大车型数量
+    
+    // 存储所有车型数据
+    let allCars = [];
     
     // 获取所有车型数据
     async function loadCarModels() {
@@ -121,73 +123,255 @@ document.addEventListener('DOMContentLoaded', function() {
             const response = await fetch('/api/car-models/');
             const data = await response.json();
             
-            // 填充车型选择下拉框
-            const selects = document.querySelectorAll('.car-select');
-            selects.forEach(select => {
-                select.innerHTML = '<option value="">请选择车型</option>';
-                data.forEach(car => {
-                    const option = document.createElement('option');
-                    option.value = car.id;
-                    option.textContent = `${car.brand_name} ${car.name}`;
-                    select.appendChild(option);
-                });
-            });
+            // 现在API已禁用分页，直接返回数组
+            const cars = Array.isArray(data) ? data : (data.results || data);
+            if (!cars || !Array.isArray(cars)) {
+                console.error('API返回数据格式错误:', data);
+                return;
+            }
+            
+            allCars = cars;
+            console.log('加载到的车型数量:', cars.length); // 调试日志
+            
+            // 填充所有车型选择下拉框
+            populateAllSelects();
+            
         } catch (error) {
             console.error('加载车型数据失败:', error);
+        }
+    }
+    
+    // 填充所有车型选择下拉框
+    function populateAllSelects() {
+        const selects = document.querySelectorAll('.car-select');
+        selects.forEach((select, index) => {
+            const placeholder = index === 0 ? '选择第一个车型...' : 
+                              index === 1 ? '选择第二个车型...' : 
+                              `选择第${index + 1}个车型...`;
+            select.innerHTML = `<option value="">${placeholder}</option>`;
+            allCars.forEach(car => {
+                const option = document.createElement('option');
+                option.value = car.id;
+                option.textContent = `${car.brand.name} ${car.name}`;
+                select.appendChild(option);
+            });
+        });
+    }
+    
+    // 添加车型选择
+     function addCarSelection() {
+         if (carCount >= maxCars) {
+             alert(`最多只能对比${maxCars}个车型`);
+             return;
+         }
+         
+         carCount++;
+         const container = document.getElementById('additionalCarsContainer');
+         
+         // 检查是否需要创建新行（每行两列）
+         let currentRow = container.querySelector('.row:last-child');
+         const existingCarsInRow = currentRow ? currentRow.querySelectorAll('.car-selection-col').length : 2;
+         
+         if (!currentRow || existingCarsInRow >= 2) {
+             // 创建新行
+             currentRow = document.createElement('div');
+             currentRow.className = 'row car-selection-row mt-3';
+             container.appendChild(currentRow);
+         }
+         
+         // 创建车型选择列
+         const newCol = document.createElement('div');
+         newCol.className = 'col-md-6 car-selection-col';
+         newCol.setAttribute('data-car-index', carCount - 1);
+         
+         newCol.innerHTML = `
+             <div class="d-flex justify-content-between align-items-start">
+                 <div class="flex-grow-1 me-2">
+                     <label class="form-label">车型${carCount}</label>
+                     <select class="form-select car-select" size="6" style="height: 150px; overflow-y: auto;">
+                         <option value="">选择第${carCount}个车型...</option>
+                     </select>
+                 </div>
+                 <div class="d-flex align-items-end" style="height: 150px;">
+                     <button class="btn btn-danger btn-sm remove-car-btn" title="删除车型">
+                         <i class="fas fa-minus"></i>
+                     </button>
+                 </div>
+             </div>
+         `;
+         
+         currentRow.appendChild(newCol);
+         
+         // 填充新添加的下拉框
+         const newSelect = newCol.querySelector('.car-select');
+         allCars.forEach(car => {
+             const option = document.createElement('option');
+             option.value = car.id;
+             option.textContent = `${car.brand.name} ${car.name}`;
+             newSelect.appendChild(option);
+         });
+         
+         // 添加删除按钮事件
+         newCol.querySelector('.remove-car-btn').addEventListener('click', function() {
+             removeCarSelection(newCol);
+         });
+         
+         // 更新添加按钮状态
+         updateAddButtonState();
+     }
+    
+    // 删除车型选择
+     function removeCarSelection(col) {
+         const row = col.parentElement;
+         col.remove();
+         carCount--;
+         
+         // 如果行中没有车型选择了，删除整行
+         if (row.querySelectorAll('.car-selection-col').length === 0) {
+             row.remove();
+         }
+         
+         // 重新编号剩余的车型
+         const allCols = document.querySelectorAll('.car-selection-col');
+         allCols.forEach((col, index) => {
+             const label = col.querySelector('.form-label');
+             if (label) {
+                 label.textContent = `车型${index + 3}`; // 从第3个开始，因为前两个是基础车型
+             }
+             col.setAttribute('data-car-index', index + 2);
+         });
+         
+         updateAddButtonState();
+     }
+    
+    // 更新添加按钮状态
+    function updateAddButtonState() {
+        const addBtn = document.getElementById('addCarBtn');
+        if (carCount >= maxCars) {
+            addBtn.disabled = true;
+            addBtn.innerHTML = '<i class="fas fa-plus"></i> 已达上限';
+        } else {
+            addBtn.disabled = false;
+            addBtn.innerHTML = '<i class="fas fa-plus"></i> 添加车型';
         }
     }
     
     // 获取车型对比数据
     async function getComparisonData(carIds) {
         try {
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                             document.querySelector('meta[name=csrf-token]')?.getAttribute('content') ||
+                             getCookie('csrftoken');
+            
             const response = await fetch('/car_analysis/comparison/data/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    'X-CSRFToken': csrfToken
                 },
                 body: JSON.stringify({ car_ids: carIds })
             });
-            return await response.json();
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const text = await response.text();
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                console.error('JSON解析错误:', e);
+                console.error('响应内容:', text);
+                throw new Error('服务器响应格式错误');
+            }
         } catch (error) {
             console.error('获取对比数据失败:', error);
-            return null;
+            return { success: false, error: error.message };
         }
+    }
+    
+    // 获取Cookie值的辅助函数
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
     }
     
     // 更新基本信息表格
     function updateBasicInfoTable(data) {
-        const tbody = document.querySelector('#basicInfoTable tbody');
+        console.log('更新表格，车型数量:', data.cars.length); // 调试日志
+        const table = document.querySelector('#basicInfoTable');
+        const thead = table.querySelector('thead tr');
+        const tbody = table.querySelector('tbody');
+        
+        // 清空现有表头（除了第一个"对比项"）
+        const firstTh = thead.querySelector('th');
+        thead.innerHTML = '';
+        thead.appendChild(firstTh);
+        
+        // 添加车型表头
+        data.cars.forEach((car, index) => {
+            const th = document.createElement('th');
+            th.className = 'car-header';
+            th.textContent = car.name;
+            thead.appendChild(th);
+        });
+        
+        // 清空并重新填充表格内容
         tbody.innerHTML = '';
         
         const fields = [
-            { key: 'price', label: '厂商指导价' },
-            { key: 'launch_date', label: '上市时间' },
-            { key: 'sales_volume', label: '月销量' },
+            { key: 'price', label: '平均价格' },
+            { key: 'sales_volume', label: '在售数量' },
             { key: 'fuel_type', label: '燃料类型' },
             { key: 'gearbox', label: '变速箱' },
-            { key: 'engine_displacement', label: '排量' }
+            { key: 'avg_mileage', label: '平均里程' },
+            { key: 'avg_year', label: '平均车龄' }
         ];
         
         fields.forEach(field => {
             const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${field.label}</td>
-                ${data.cars.map(car => `<td>${car[field.key] || '-'}</td>`).join('')}
-            `;
+            let cells = `<td><strong>${field.label}</strong></td>`;
+            
+            // 为每个车型添加数据列
+            data.cars.forEach(car => {
+                cells += `<td>${car[field.key] || '-'}</td>`;
+            });
+            
+            row.innerHTML = cells;
             tbody.appendChild(row);
         });
     }
     
     // 更新性能参数雷达图
-    function updatePerformanceChart(data) {
+    function updatePerformanceChart(cars) {
+        if (!cars || !Array.isArray(cars)) {
+            console.error('updatePerformanceChart: cars参数无效', cars);
+            return;
+        }
+        
+        console.log('更新性能图表，车型数据:', cars); // 调试日志
+        
         const option = {
             title: {
-                text: '性能参数雷达图'
+                text: '性能参数雷达图',
+                left: 'center'
             },
-            tooltip: {},
+            tooltip: {
+                trigger: 'item'
+            },
             legend: {
-                data: data.cars.map(car => car.name)
+                data: cars.map(car => car.name),
+                bottom: 10
             },
             radar: {
                 indicator: [
@@ -196,60 +380,120 @@ document.addEventListener('DOMContentLoaded', function() {
                     { name: '舒适性评分', max: 5 },
                     { name: '油耗表现', max: 5 },
                     { name: '空间评分', max: 5 }
-                ]
+                ],
+                center: ['50%', '50%'],
+                radius: '60%'
             },
             series: [{
                 type: 'radar',
-                data: data.cars.map(car => ({
+                data: cars.map((car, index) => ({
                     value: [
-                        car.performance?.power || 0,
-                        car.performance?.handling || 0,
-                        car.performance?.comfort || 0,
-                        car.performance?.fuel_economy || 0,
-                        car.performance?.space || 0
+                        car.performance?.power || 2.5,
+                        car.performance?.handling || 2.5,
+                        car.performance?.comfort || 2.5,
+                        car.performance?.fuel_economy || 2.5,
+                        car.performance?.space || 2.5
                     ],
-                    name: car.name
+                    name: car.name,
+                    itemStyle: {
+                        color: ['#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de'][index % 5]
+                    }
                 }))
             }]
         };
         
         performanceChart.setOption(option);
+        console.log('性能图表已更新'); // 调试日志
     }
     
     // 更新用户评价柱状图
-    function updateRatingChart(data) {
+    function updateRatingChart(cars) {
+        if (!cars || !Array.isArray(cars)) {
+            console.error('updateRatingChart: cars参数无效', cars);
+            return;
+        }
+        
+        console.log('更新评分图表，车型数据:', cars); // 调试日志
+        
         const option = {
             title: {
-                text: '用户评分对比'
+                text: '用户评分对比',
+                left: 'center'
             },
-            tooltip: {},
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: {
+                    type: 'shadow'
+                }
+            },
             legend: {
-                data: data.cars.map(car => car.name)
+                data: cars.map(car => car.name),
+                bottom: 10
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '15%',
+                containLabel: true
             },
             xAxis: {
-                data: ['综合评分', '外观', '内饰', '配置', '动力', '操控', '油耗', '舒适性']
+                type: 'category',
+                data: ['综合评分', '外观', '内饰', '配置', '动力', '操控', '油耗', '舒适性'],
+                axisLabel: {
+                    rotate: 45
+                }
             },
             yAxis: {
                 type: 'value',
-                max: 5
+                max: 5,
+                min: 0
             },
-            series: data.cars.map(car => ({
+            series: cars.map((car, index) => ({
                 name: car.name,
                 type: 'bar',
                 data: [
-                    car.ratings?.overall || 0,
-                    car.ratings?.appearance || 0,
-                    car.ratings?.interior || 0,
-                    car.ratings?.configuration || 0,
-                    car.ratings?.power || 0,
-                    car.ratings?.handling || 0,
-                    car.ratings?.fuel_economy || 0,
-                    car.ratings?.comfort || 0
-                ]
+                    car.ratings?.overall || 3.0,
+                    car.ratings?.appearance || 3.0,
+                    car.ratings?.interior || 3.0,
+                    car.ratings?.configuration || 3.0,
+                    car.ratings?.power || 3.0,
+                    car.ratings?.handling || 3.0,
+                    car.ratings?.fuel_economy || 3.0,
+                    car.ratings?.comfort || 3.0
+                ],
+                itemStyle: {
+                    color: ['#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de'][index % 5]
+                }
             }))
         };
         
         ratingChart.setOption(option);
+        console.log('评分图表已更新'); // 调试日志
+    }
+    
+    // 导出图表功能
+    window.exportChart = function(chartId, chartName) {
+        const chart = chartId === 'performanceChart' ? performanceChart : ratingChart;
+        const url = chart.getDataURL({
+            type: 'png',
+            pixelRatio: 2,
+            backgroundColor: '#fff'
+        });
+        
+        const link = document.createElement('a');
+        link.download = `${chartName}_${new Date().toISOString().slice(0, 10)}.png`;
+        link.href = url;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+    
+    // 导出所有图表
+    function exportAllCharts() {
+        exportChart('performanceChart', '性能参数对比');
+        setTimeout(() => {
+            exportChart('ratingChart', '用户评价对比');
+        }, 500);
     }
     
     // 开始对比按钮点击事件
@@ -271,23 +515,44 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const data = await getComparisonData(selectedIds);
             if (data && data.success) {
+                console.log('对比数据:', data); // 调试日志
                 updateBasicInfoTable(data);
-                updatePerformanceChart(data);
-                updateRatingChart(data);
+                updatePerformanceChart(data.cars);
+                updateRatingChart(data.cars);
                 
-                // 显示对比结果
+                // 显示对比结果和导出按钮
                 document.getElementById('comparisonResults').style.display = 'block';
+                document.getElementById('exportChartsBtn').style.display = 'inline-block';
+                
+                // 重新调整图表大小（解决隐藏容器中图表显示问题）
+                setTimeout(() => {
+                    performanceChart.resize();
+                    ratingChart.resize();
+                }, 100);
+                
+                // 滚动到结果区域
+                document.getElementById('comparisonResults').scrollIntoView({ 
+                    behavior: 'smooth' 
+                });
             } else {
-                alert('获取对比数据失败，请重试');
+                const errorMsg = data?.error || '获取对比数据失败，请重试';
+                alert(errorMsg);
+                console.error('对比数据错误:', data);
             }
         } catch (error) {
             console.error('对比失败:', error);
-            alert('对比失败，请重试');
+            alert('对比失败，请重试: ' + error.message);
         } finally {
             this.disabled = false;
             this.textContent = '开始对比';
         }
     });
+    
+    // 导出所有图表按钮点击事件
+    document.getElementById('exportChartsBtn').addEventListener('click', exportAllCharts);
+    
+    // 添加车型按钮点击事件
+    document.getElementById('addCarBtn').addEventListener('click', addCarSelection);
     
     // 初始化图表配置
     const initialPerformanceOption = {
@@ -329,6 +594,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 加载车型数据
     loadCarModels();
+    
+    // 初始化添加按钮状态
+    updateAddButtonState();
 });
 </script>
 {% endblock %}

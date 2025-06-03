@@ -16,3 +16,9 @@ git status
 git add .
 git commit -m "modify 完善前台可视化分析"
 git push origin main
+
+
+回溯
+git log
+git checkout 0ad9b2d461dc79fcac5b894c4db1bc71f059e496
+git reset --hard

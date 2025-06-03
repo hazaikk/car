@@ -7,6 +7,7 @@ from crawler.models import Brand, CarModel, UsedCar
 from .serializers import BrandSerializer, CarModelSerializer, UsedCarSerializer
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from django.db.models import Q, Count
 
 class BrandViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Brand.objects.all()
@@ -15,11 +16,15 @@ class BrandViewSet(viewsets.ReadOnlyModelViewSet):
     search_fields = ['name']
 
 class CarModelViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = CarModel.objects.all()
     serializer_class = CarModelSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['brand']
     search_fields = ['name']
+    pagination_class = None  # 禁用分页，返回所有车型
+    
+    def get_queryset(self):
+        """返回所有车型，让用户可以选择任意车型进行对比"""
+        return CarModel.objects.select_related('brand').order_by('brand__name', 'name')
 
 class UsedCarViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = UsedCar.objects.all()

@@ -6,7 +6,7 @@ app_name = 'api'
 
 router = DefaultRouter()
 router.register(r'brands', views.BrandViewSet)
-router.register(r'car-models', views.CarModelViewSet)
+router.register(r'car-models', views.CarModelViewSet, basename='carmodel')
 router.register(r'used-cars', views.UsedCarViewSet)
 
 urlpatterns = [
