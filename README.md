@@ -201,8 +201,8 @@ DATABASE_URL=sqlite:///db.sqlite3
 
 如有问题或建议，请通过以下方式联系:
 
-- 📧 Email: your.email@example.com
-- 🐛 Issues: [GitHub Issues](https://github.com/yourusername/cardata_platform/issues)
+- 📧 Email: 3505318655@qq.com
+- 🐛 Issues: [GitHub Issues](https://github.com/hazaikk/cardata_platform/issues)
 
 ---
 
