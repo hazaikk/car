@@ -73,9 +73,7 @@
                     <button id="refreshBtn" class="btn btn-light btn-sm me-2">
                         <i class="fas fa-sync-alt"></i> 刷新分析
                     </button>
-                    <button id="exportBtn" class="btn btn-success btn-sm me-2">
-                        <i class="fas fa-download"></i> 导出Excel
-                    </button>
+
                     <button id="exportImageBtn" class="btn btn-info btn-sm" style="color: white;">
                         <i class="fas fa-image"></i> 导出图片
                     </button>
@@ -301,7 +299,6 @@
         document.getElementById('applyFilters').addEventListener('click', performAnalysis);
         document.getElementById('clearFilters').addEventListener('click', clearFilters);
         document.getElementById('refreshBtn').addEventListener('click', performAnalysis);
-        document.getElementById('exportBtn').addEventListener('click', exportToExcel);
         document.getElementById('exportImageBtn').addEventListener('click', exportToImage);
         
         // 绑定全选/取消全选品牌事件
@@ -376,10 +373,7 @@
             loadAnalysisData();
         });
         
-        // 导出按钮
-        document.getElementById('exportBtn').addEventListener('click', function() {
-            exportToExcel();
-        });
+
         
         // 导出图片按钮事件
         document.getElementById('exportImageBtn').addEventListener('click', exportToImage);
@@ -611,66 +605,7 @@
         document.getElementById('errorAlert').style.display = 'block';
     }
     
-    function exportToExcel() {
-        const formData = new FormData();
-        formData.append('analysis_type', currentAnalysisType);
-        formData.append('export', 'excel');
-        
-        // 添加筛选条件
-        const brand = document.getElementById('brandFilter').value;
-        const region = document.getElementById('regionFilter').value;
-        const year = document.getElementById('yearFilter').value;
-        const fuelType = document.getElementById('fuelTypeFilter').value;
-        const minPrice = document.getElementById('minPrice').value;
-        const maxPrice = document.getElementById('maxPrice').value;
-        const minMileage = document.getElementById('minMileage').value;
-        const maxMileage = document.getElementById('maxMileage').value;
-        
-        if (brand) formData.append('brand', brand);
-        if (region) formData.append('region', region);
-        if (year) formData.append('year', year);
-        if (fuelType) formData.append('fuel_type', fuelType);
-        if (minPrice) formData.append('min_price', minPrice);
-        if (maxPrice) formData.append('max_price', maxPrice);
-        if (minMileage) formData.append('min_mileage', minMileage);
-        if (maxMileage) formData.append('max_mileage', maxMileage);
-        
-        // 构建URL参数用于Excel导出
-        const params = new URLSearchParams();
-        params.append('type', currentAnalysisType);
-        params.append('export', 'true');
-        if (brand) params.append('brand', brand);
-        if (region) params.append('region', region);
-        if (year) params.append('year', year);
-        if (fuelType) params.append('fuel_type', fuelType);
-        if (minPrice) params.append('min_price', minPrice);
-        if (maxPrice) params.append('max_price', maxPrice);
-        if (minMileage) params.append('min_mileage', minMileage);
-        if (maxMileage) params.append('max_mileage', maxMileage);
-        
-        fetch('{% url "data_analysis:price_analysis_data" %}?' + params.toString())
-        .then(response => {
-            if (response.ok) {
-                return response.blob();
-            }
-            throw new Error('导出失败');
-        })
-        .then(blob => {
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = url;
-            a.download = `价格分析_${currentAnalysisType}_${new Date().toISOString().split('T')[0]}.xlsx`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-        })
-        .catch(error => {
-            console.error('Export error:', error);
-            alert('导出失败，请稍后重试');
-        });
-    }
+
     
     function exportToImage() {
         const canvas = document.querySelector('#priceAnalysisChart');

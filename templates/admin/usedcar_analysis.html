@@ -1245,39 +1245,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // 添加调试信息
     console.log('页面脚本已加载，jQuery版本:', $.fn?.jquery, 'jQuery UI版本:', $.ui?.version);
 
-    // 导出图片按钮点击事件
-    exportImageBtn.addEventListener('click', function(e) {
-        e.preventDefault(); // 防止默认行为
-        if (currentChart) {
-            try {
-                // 创建一个临时链接并触发下载
-                const link = document.createElement('a');
-                // ECharts导出方法
-                if (typeof currentChart.getDataURL === 'function') {
-                    // ECharts实例
-                    link.href = currentChart.getDataURL({
-                        type: 'png',
-                        pixelRatio: 2,
-                        backgroundColor: '#fff'
-                    });
-                } else if (typeof currentChart.toBase64Image === 'function') {
-                    // Chart.js实例
-                    link.href = currentChart.toBase64Image();
-                } else {
-                    throw new Error('图表实例不支持导出功能');
-                }
-                link.download = (document.getElementById('analysisType').selectedOptions[0].text || 'analysis_chart') + '.png';
-                document.body.appendChild(link); // 添加到DOM以便在Firefox中工作
-                link.click();
-                document.body.removeChild(link); // 清理
-            } catch (error) {
-                console.error('导出图片失败:', error);
-                alert('导出图片失败: ' + error.message);
-            }
-        } else {
-            alert('请先生成图表再导出图片');
-        }
-    });
+
 
     // 导出Excel按钮点击事件
     exportExcelBtn.addEventListener('click', function(e) {

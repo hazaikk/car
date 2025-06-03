@@ -47,7 +47,7 @@
                 <h5 class="card-title mb-0">品牌分布</h5>
             </div>
             <div class="card-body">
-                <canvas id="brandChart" height="300"></canvas>
+                <canvas id="brandChart" height="600"></canvas>
             </div>
         </div>
     </div>
@@ -57,7 +57,7 @@
                 <h5 class="card-title mb-0">价格区间分布</h5>
             </div>
             <div class="card-body">
-                <canvas id="priceChart" height="300"></canvas>
+                <canvas id="priceChart" height="600"></canvas>
             </div>
         </div>
     </div>
@@ -150,6 +150,7 @@
             data: brandData,
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 plugins: {
                     legend: {
                         position: 'right',
@@ -169,6 +170,7 @@
             data: priceData,
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 plugins: {
                     legend: {
                         display: false
