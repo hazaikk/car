@@ -7,18 +7,30 @@ python manage.py import_used_cars "二手车数据.xlsx"
 
 启动
 python manage.py runserver
+迁移
+python manage.py migrate
+
+python manage.py makemigrations
+
 
 创建管理员
 python manage.py createsuperuser --username root --email admin@example.com
 
+git 提交
 cd /path/to/your/project
 git status
 git add .
-git commit -m "add 增加前台图表创建功能"
+git commit -m "modify 前台操作后台不显示问题"
 git push origin main
 
 
 回溯
 git log
-git checkout 0ad9b2d461dc79fcac5b894c4db1bc71f059e496
+git checkout 4ef18810348d99ab932a030aa143ef5e7efe2b6e
 git reset --hard
+
+分支合并
+git branch -vv
+git checkout main
+git cherry-pick 974d69f
+git push origin main
