@@ -32,8 +32,8 @@ def contact_view(request):
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path('accounts/', include('accounts.urls')),  # 用户账户管理（优先级高）
     path('accounts/', include('allauth.urls')),  # allauth URLs
-    path('accounts/', include('accounts.urls')),  # 用户账户管理
     path('', include('dashboard.urls')),  # 首页和仪表盘
     path('analysis/', include('data_analysis.urls')),  # 数据分析
     path('api/', include('api.urls')),  # API接口

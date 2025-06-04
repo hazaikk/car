@@ -101,25 +101,13 @@ def password_reset(request):
             # 生成密码重置令牌
             token = default_token_generator.make_token(user)
             uid = urlsafe_base64_encode(force_bytes(user.pk))
-            reset_url = request.build_absolute_uri(
-                reverse('accounts:password_reset_confirm', kwargs={'uidb64': uid, 'token': token})
-            )
             
-            # 发送密码重置邮件
-            subject = '重置您的密码'
-            message = render_to_string('account/password_reset_email.html', {
-                'user': user,
-                'reset_url': reset_url,
-            })
-            try:
-                send_mail(subject, message, None, [email])
-                messages.success(request, '密码重置链接已发送到您的邮箱')
-            except Exception as e:
-                messages.error(request, '发送邮件失败，请稍后重试')
+            # 直接跳转到密码重置确认页面，不发送邮件
+            messages.success(request, '邮箱验证成功，请设置新密码')
+            return redirect('accounts:password_reset_confirm', uidb64=uid, token=token)
         except User.DoesNotExist:
-            # 为了安全，即使用户不存在也显示成功消息
-            messages.success(request, '如果该邮箱存在，密码重置链接已发送')
-        return redirect('accounts:login')
+            messages.error(request, '该邮箱不存在，请检查后重试')
+        return redirect('accounts:password_reset')
     return render(request, 'account/password_reset.html')
 
 @csrf_protect

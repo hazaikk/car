@@ -161,12 +161,15 @@ AUTHENTICATION_BACKENDS = [
 
 # allauth设置
 ACCOUNT_AUTHENTICATION_METHOD = 'username_email'  # 使用用户名或邮箱登录
-ACCOUNT_EMAIL_REQUIRED = True  # 注册时必须提供邮箱
-ACCOUNT_EMAIL_VERIFICATION = 'optional'  # 邮箱验证可选
+ACCOUNT_EMAIL_REQUIRED = False  # 注册时不要求邮箱
+ACCOUNT_EMAIL_VERIFICATION = 'none'  # 禁用邮箱验证
 ACCOUNT_USERNAME_REQUIRED = True  # 要求用户名
 ACCOUNT_SIGNUP_PASSWORD_ENTER_TWICE = True  # 注册时输入两次密码
 ACCOUNT_UNIQUE_EMAIL = True  # 邮箱唯一
 LOGIN_REDIRECT_URL = '/'  # 登录后重定向到首页
+
+# 邮箱配置（开发环境使用控制台输出）
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 # SimpleUI设置
 SIMPLEUI_HOME_INFO = False  # 关闭首页信息
